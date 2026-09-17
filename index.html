@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Free Spirit Tour Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="freespirit_logo.png" alt="Free Spirit">
+    <h1>Report a tour</h1>
+
+    <div id="nav-row" class="nav-row hidden">
+      <button id="back-button" type="button" class="link-button">&larr; Back</button>
+      <span id="progress-label" class="progress-label"></span>
+    </div>
+    <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+
+    <section id="step-city" class="step">
+      <h2>City</h2>
+      <div id="city-buttons" class="button-row"></div>
+    </section>
+
+    <section id="step-name" class="step hidden">
+      <h2>Name</h2>
+      <select id="name-select"></select>
+      <button id="name-continue" type="button">Continue</button>
+    </section>
+
+    <section id="step-tour" class="step hidden">
+      <h2>Tour</h2>
+      <select id="tour-select"></select>
+      <button id="tour-continue" type="button">Continue</button>
+    </section>
+
+    <section id="step-details-free" class="step hidden">
+      <h2>Tour details</h2>
+      <div class="field">
+        <label>Language</label>
+        <div id="language-buttons" class="button-row"></div>
+      </div>
+      <div class="field">
+        <label for="pax-input">Pax</label>
+        <input id="pax-input" type="number" min="1" step="1">
+      </div>
+      <div class="field">
+        <label for="date-input">Date</label>
+        <input id="date-input" type="date">
+      </div>
+      <div class="field">
+        <label for="time-select">Time</label>
+        <select id="time-select"></select>
+      </div>
+      <div class="field">
+        <label for="photo-input">Photo (optional)</label>
+        <div class="file-input">
+          <label for="photo-input" class="file-button">Choose photo</label>
+          <span id="photo-filename" class="file-name">No file chosen</span>
+          <input id="photo-input" type="file" accept="image/*" class="visually-hidden">
+        </div>
+      </div>
+      <div class="field">
+        <label for="note-input">Note (optional)</label>
+        <input id="note-input" type="text">
+      </div>
+      <button id="signin-button" type="button">Sign in with Google</button>
+      <p id="signin-status" class="hidden"></p>
+      <p id="details-error" class="error hidden"></p>
+      <button id="submit-button" type="button" disabled>Submit</button>
+    </section>
+
+    <section id="step-details-paid" class="step hidden">
+      <h2>Tour details (paid)</h2>
+      <div class="field">
+        <label for="paid-language-select">Language</label>
+        <select id="paid-language-select"></select>
+      </div>
+      <div class="field">
+        <label for="paid-date-input">Date</label>
+        <input id="paid-date-input" type="date">
+      </div>
+      <div class="field">
+        <label for="paid-time-select">Time</label>
+        <select id="paid-time-select"></select>
+      </div>
+      <div class="field">
+        <label for="paid-pax-input">Total Pax</label>
+        <input id="paid-pax-input" type="number" min="1" step="1">
+      </div>
+      <div id="paid-channel-fields"></div>
+      <div class="field">
+        <label for="no-show-input">No Show (optional)</label>
+        <input id="no-show-input" type="text">
+      </div>
+      <div class="field">
+        <label for="paid-photo-input">Photo (optional)</label>
+        <div class="file-input">
+          <label for="paid-photo-input" class="file-button">Choose photo</label>
+          <span id="paid-photo-filename" class="file-name">No file chosen</span>
+          <input id="paid-photo-input" type="file" accept="image/*" class="visually-hidden">
+        </div>
+      </div>
+      <div class="field">
+        <label for="paid-note-input">Note (optional)</label>
+        <input id="paid-note-input" type="text">
+      </div>
+      <button id="paid-signin-button" type="button">Sign in with Google</button>
+      <p id="paid-signin-status" class="hidden"></p>
+      <p id="paid-details-error" class="error hidden"></p>
+      <button id="paid-submit-button" type="button" disabled>Submit</button>
+    </section>
+
+    <section id="step-result" class="step hidden">
+      <p id="result-message"></p>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
