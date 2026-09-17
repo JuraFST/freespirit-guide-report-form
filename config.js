@@ -7,8 +7,10 @@ export const CONFIG = {
     { code: 'zd', label: 'Zadar' },
     { code: 'st', label: 'Split' },
   ],
+  // Public demo: only Antun Zebec and Juraj Zebec, not the full real
+  // roster (that stays in the private repo's config.js).
   guidesByCity: {
-    zg: ['Antun Zebec'],
+    zg: ['Antun Zebec', 'Juraj Zebec'],
     du: [],
     zd: [],
     st: [],

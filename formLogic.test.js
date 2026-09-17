@@ -40,7 +40,7 @@ test('validateFreeTourFields accepts a fully valid set with no errors', () => {
 
 test('buildSubmissionPayload passes through tour and coerces pax to a number', () => {
   var payload = buildSubmissionPayload({
-    accessToken: 'tok123', city: 'zg', name: 'Darko Crnolatac', tour: 'free',
+    city: 'zg', name: 'Darko Crnolatac', tour: 'free',
     language: 'eng', pax: '4', date: '2026-09-20', time: '10:00',
   });
   assert.equal(payload.tour, 'free');
@@ -50,7 +50,7 @@ test('buildSubmissionPayload passes through tour and coerces pax to a number', (
 
 test('buildSubmissionPayload includes channels and noShow for a paid tour', () => {
   var payload = buildSubmissionPayload({
-    accessToken: 'tok123', city: 'zg', name: 'Darko Crnolatac', tour: 'krka',
+    city: 'zg', name: 'Darko Crnolatac', tour: 'krka',
     language: 'eng', pax: '10', date: '2026-09-20', time: '10:00',
     channels: { web: '4', viator: '6' }, noShow: '1',
   });
@@ -61,7 +61,7 @@ test('buildSubmissionPayload includes channels and noShow for a paid tour', () =
 
 test('buildSubmissionPayload omits channels and noShow for a free tour', () => {
   var payload = buildSubmissionPayload({
-    accessToken: 'tok123', city: 'zg', name: 'Darko Crnolatac', tour: 'free',
+    city: 'zg', name: 'Darko Crnolatac', tour: 'free',
     language: 'eng', pax: '4', date: '2026-09-20', time: '10:00',
   });
   assert.equal('channels' in payload, false);
@@ -70,7 +70,7 @@ test('buildSubmissionPayload omits channels and noShow for a free tour', () => {
 
 test('buildSubmissionPayload includes photo when provided', () => {
   var payload = buildSubmissionPayload({
-    accessToken: 'tok123', city: 'zg', name: 'Darko Crnolatac', tour: 'free',
+    city: 'zg', name: 'Darko Crnolatac', tour: 'free',
     language: 'eng', pax: '4', date: '2026-09-20', time: '10:00',
     photo: { data: 'AAAA', mimeType: 'image/jpeg', filename: 'x.jpg' },
   });

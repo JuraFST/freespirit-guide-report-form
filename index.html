@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <main class="card">
@@ -66,10 +65,8 @@
         <label for="note-input">Note (optional)</label>
         <input id="note-input" type="text">
       </div>
-      <button id="signin-button" type="button">Sign in with Google</button>
-      <p id="signin-status" class="hidden"></p>
       <p id="details-error" class="error hidden"></p>
-      <button id="submit-button" type="button" disabled>Submit</button>
+      <button id="submit-button" type="button">Submit</button>
     </section>
 
     <section id="step-details-paid" class="step hidden">
@@ -107,10 +104,8 @@
         <label for="paid-note-input">Note (optional)</label>
         <input id="paid-note-input" type="text">
       </div>
-      <button id="paid-signin-button" type="button">Sign in with Google</button>
-      <p id="paid-signin-status" class="hidden"></p>
       <p id="paid-details-error" class="error hidden"></p>
-      <button id="paid-submit-button" type="button" disabled>Submit</button>
+      <button id="paid-submit-button" type="button">Submit</button>
     </section>
 
     <section id="step-result" class="step hidden">

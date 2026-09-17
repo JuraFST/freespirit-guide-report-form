@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload } from './formLogic.js';
 
-var state = { city: null, name: null, tour: null, language: null, accessToken: null };
+var state = { city: null, name: null, tour: null, language: null };
 
 var STEP_NUMBERS = {
   'step-city': 1,
@@ -169,37 +169,6 @@ function renderChannelFields() {
   });
 }
 
-// google.accounts.oauth2 (not google.accounts.id) — the credential/ID-token
-// flow's popup relies on window.postMessage back to the opener, which
-// Chrome's Cross-Origin-Opener-Policy blocks after the account picker
-// closes. This token-client flow uses a separate code path unaffected by
-// that COOP restriction.
-function initGoogleSignIn() {
-  if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
-    window.setTimeout(initGoogleSignIn, 200);
-    return;
-  }
-  var tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.clientId,
-    scope: 'openid email',
-    callback: function (response) {
-      state.accessToken = response.access_token;
-      ['signin-status', 'paid-signin-status'].forEach(function (id) {
-        var el = document.getElementById(id);
-        el.textContent = 'Signed in.';
-        el.classList.remove('hidden');
-      });
-      document.getElementById('submit-button').disabled = false;
-      document.getElementById('paid-submit-button').disabled = false;
-    },
-  });
-  ['signin-button', 'paid-signin-button'].forEach(function (id) {
-    document.getElementById(id).addEventListener('click', function () {
-      tokenClient.requestAccessToken();
-    });
-  });
-}
-
 function showError(message) {
   var el = document.getElementById('details-error');
   el.textContent = message;
@@ -210,6 +179,10 @@ function hideError() {
   document.getElementById('details-error').classList.add('hidden');
 }
 
+function firstName_(fullName) {
+  return String(fullName || '').trim().split(' ')[0];
+}
+
 function showResult(message) {
   goToStep('step-result');
   document.getElementById('result-message').textContent = message;
@@ -217,10 +190,6 @@ function showResult(message) {
 
 function handleSubmit() {
   hideError();
-  if (!state.accessToken) {
-    showError('Sign in with Google first.');
-    return;
-  }
   var fields = {
     language: state.language,
     pax: document.getElementById('pax-input').value,
@@ -240,7 +209,6 @@ function handleSubmit() {
   }
 
   var payload = buildSubmissionPayload({
-    accessToken: state.accessToken,
     city: state.city,
     name: state.name,
     tour: state.tour,
@@ -267,7 +235,7 @@ function handleSubmit() {
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (result.ok) {
-        showResult('Thanks! Your tour was logged.');
+        showResult('Thanks, ' + firstName_(state.name) + '! Your tour was logged. Nice work.');
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -283,11 +251,6 @@ function handleSubmit() {
 
 function handlePaidSubmit() {
   document.getElementById('paid-details-error').classList.add('hidden');
-  if (!state.accessToken) {
-    document.getElementById('paid-details-error').textContent = 'Sign in with Google first.';
-    document.getElementById('paid-details-error').classList.remove('hidden');
-    return;
-  }
   var channels = {};
   CONFIG.salesChannels.forEach(function (channel) {
     channels[channel.code] = document.getElementById('channel-' + channel.code).value;
@@ -315,7 +278,6 @@ function handlePaidSubmit() {
   }
 
   var payload = buildSubmissionPayload({
-    accessToken: state.accessToken,
     city: state.city,
     name: state.name,
     tour: state.tour,
@@ -341,7 +303,7 @@ function handlePaidSubmit() {
     .then(function (result) {
       if (result.ok) {
         goToStep('step-result');
-        document.getElementById('result-message').textContent = 'Thanks! Your tour was logged.';
+        document.getElementById('result-message').textContent = 'Thanks, ' + firstName_(state.name) + '! Your tour was logged. Nice work.';
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -369,7 +331,11 @@ document.getElementById('tour-continue').addEventListener('click', goToTourDetai
 document.getElementById('submit-button').addEventListener('click', handleSubmit);
 document.getElementById('paid-submit-button').addEventListener('click', handlePaidSubmit);
 document.getElementById('back-button').addEventListener('click', goBack);
-window.addEventListener('load', initGoogleSignIn);
+['date-input', 'paid-date-input'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function () {
+    if (this.showPicker) { try { this.showPicker(); } catch (e) {} }
+  });
+});
 document.getElementById('photo-input').addEventListener('change', function (e) {
   var file = e.target.files[0];
   document.getElementById('photo-filename').textContent = file ? file.name : 'No file chosen';

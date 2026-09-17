@@ -41,7 +41,6 @@ export function validatePaidTourFields(fields, allowedLanguages, allowedTimeSlot
 
 export function buildSubmissionPayload(fields) {
   var payload = {
-    accessToken: fields.accessToken,
     city: fields.city,
     name: fields.name,
     tour: fields.tour,
