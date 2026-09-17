@@ -18,6 +18,14 @@ h1 {
   font-size: 28px;
   margin: 0 0 28px;
 }
+/* #page-title-text is the actual text run, inline-block so its own width
+   can be measured (app.js) and translated — text-align/justify-content
+   are discrete properties and would just snap instead of gliding, so
+   centering is done via transform instead. */
+#page-title-text {
+  display: inline-block;
+  transition: transform 3s ease;
+}
 .card {
   max-width: 480px;
   margin: 0 auto;
@@ -26,11 +34,22 @@ h1 {
   padding: 40px 28px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
 .logo {
   display: block;
   height: 32px;
   width: auto;
-  margin-bottom: 24px;
+}
+.today-date {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* Nav row: back button + step progress */
@@ -92,6 +111,15 @@ h1 {
 }
 .hidden { display: none; }
 
+#step-result { margin-top: 8px; }
+#result-message {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--black);
+  margin: 0;
+}
+#result-message strong { font-weight: 700; }
+
 .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 #city-buttons {
   display: grid;
@@ -113,6 +141,28 @@ h1 {
   cursor: pointer;
 }
 .button-row button.selected, #city-buttons button.selected { background: var(--black); color: var(--white); }
+
+/* Per-city landmark watermark (Flaticon "Croatia" pack, free tier — see
+   README for required attribution). Low-opacity ::before so it sits behind
+   the button's own text/border painting, not affecting them. */
+#city-buttons button {
+  position: relative;
+  overflow: hidden;
+}
+#city-buttons button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: auto 100%;
+  opacity: 0.25;
+  pointer-events: none;
+}
+#city-buttons button[data-code="zg"]::before { background-image: url('city-icons/zagreb.png'); }
+#city-buttons button[data-code="du"]::before { background-image: url('city-icons/dubrovnik.png'); }
+#city-buttons button[data-code="zd"]::before { background-image: url('city-icons/zadar.png'); }
+#city-buttons button[data-code="st"]::before { background-image: url('city-icons/split.png'); }
 
 .field { margin: 20px 0; }
 .field > label {
@@ -237,3 +287,13 @@ button:focus, input:focus, select:focus { outline: none; }
   font-size: 13px;
   margin: 16px 0;
 }
+
+.attribution {
+  max-width: 480px;
+  margin: 12px auto 0;
+  padding: 0 28px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+.attribution a { color: var(--muted); }

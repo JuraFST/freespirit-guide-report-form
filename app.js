@@ -13,17 +13,36 @@ var STEP_NUMBERS = {
 var TOTAL_STEPS = 4;
 var stepHistory = ['step-city'];
 
+function resetTitlePosition_(titleText) {
+  titleText.style.transition = 'none';
+  titleText.style.transform = 'translateX(0)';
+  void titleText.offsetWidth; // force reflow so the reset takes effect before re-enabling the transition
+}
+
 function showStep_(id) {
   document.querySelectorAll('.step').forEach(function (el) { el.classList.add('hidden'); });
   document.getElementById(id).classList.remove('hidden');
 
+  var title = document.getElementById('page-title');
+  var titleText = document.getElementById('page-title-text');
   var navRow = document.getElementById('nav-row');
   var progressTrack = document.querySelector('.progress-track');
   if (id === 'step-result') {
+    titleText.textContent = 'Upisano! :)';
+    resetTitlePosition_(titleText);
+    // Read layout back before setting the target transform, or the browser
+    // would just apply the end state instantly instead of transitioning
+    // from the reset (left-aligned) position.
+    var offset = title.clientWidth / 2 - titleText.offsetWidth / 2;
+    titleText.style.transition = '';
+    titleText.style.transform = 'translateX(' + offset + 'px)';
     navRow.classList.add('hidden');
     progressTrack.classList.add('hidden');
     return;
   }
+  titleText.textContent = 'Tour Log';
+  resetTitlePosition_(titleText);
+  titleText.style.transition = '';
   navRow.classList.remove('hidden');
   progressTrack.classList.remove('hidden');
   document.getElementById('back-button').style.visibility = stepHistory.length > 1 ? 'visible' : 'hidden';
@@ -162,6 +181,8 @@ function renderChannelFields() {
     input.type = 'number';
     input.min = '0';
     input.step = '1';
+    input.inputMode = 'numeric';
+    input.pattern = '[0-9]*';
     input.id = 'channel-' + channel.code;
     field.appendChild(label);
     field.appendChild(input);
@@ -183,9 +204,11 @@ function firstName_(fullName) {
   return String(fullName || '').trim().split(' ')[0];
 }
 
-function showResult(message) {
+// html: trusted — always built from CONFIG.guidesByCity's fixed guide list,
+// never free-typed user input, so innerHTML (needed for the bolded name) is safe.
+function showResult(html) {
   goToStep('step-result');
-  document.getElementById('result-message').textContent = message;
+  document.getElementById('result-message').innerHTML = html;
 }
 
 function handleSubmit() {
@@ -235,7 +258,7 @@ function handleSubmit() {
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (result.ok) {
-        showResult('Thanks, ' + firstName_(state.name) + '! Your tour was logged. Nice work.');
+        showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -302,8 +325,7 @@ function handlePaidSubmit() {
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (result.ok) {
-        goToStep('step-result');
-        document.getElementById('result-message').textContent = 'Thanks, ' + firstName_(state.name) + '! Your tour was logged. Nice work.';
+        showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -319,6 +341,14 @@ function handlePaidSubmit() {
     });
 }
 
+function formatTodayDate_() {
+  var d = new Date();
+  var day = String(d.getDate()).padStart(2, '0');
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  return day + '.' + month + '.' + d.getFullYear() + '.';
+}
+
+document.getElementById('today-date').textContent = formatTodayDate_();
 renderCityButtons();
 renderLanguageButtons();
 renderTimeSlots();

@@ -9,8 +9,11 @@
 </head>
 <body>
   <main class="card">
-    <img class="logo" src="freespirit_logo.png" alt="Free Spirit">
-    <h1>Report a tour</h1>
+    <div class="header-row">
+      <img class="logo" src="freespirit_logo.png" alt="Free Spirit">
+      <span id="today-date" class="today-date"></span>
+    </div>
+    <h1 id="page-title"><span id="page-title-text">Tour Log</span></h1>
 
     <div id="nav-row" class="nav-row hidden">
       <button id="back-button" type="button" class="link-button">&larr; Back</button>
@@ -43,7 +46,7 @@
       </div>
       <div class="field">
         <label for="pax-input">Pax</label>
-        <input id="pax-input" type="number" min="1" step="1">
+        <input id="pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div class="field">
         <label for="date-input">Date</label>
@@ -85,7 +88,7 @@
       </div>
       <div class="field">
         <label for="paid-pax-input">Total Pax</label>
-        <input id="paid-pax-input" type="number" min="1" step="1">
+        <input id="paid-pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div id="paid-channel-fields"></div>
       <div class="field">
@@ -112,6 +115,10 @@
       <p id="result-message"></p>
     </section>
   </main>
+  <p class="attribution">
+    City icons by <a href="https://www.flaticon.com/authors/freepik" target="_blank" rel="noopener">Freepik</a>
+    from <a href="https://www.flaticon.com/packs/croatia" target="_blank" rel="noopener">Flaticon</a>
+  </p>
   <script type="module" src="app.js"></script>
 </body>
 </html>
