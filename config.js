@@ -8,10 +8,10 @@ export const CONFIG = {
     { code: 'st', label: 'Split' },
   ],
   // Keep in sync with backend/Constants.gs's GUIDE_DIRECTORY (name+city).
-  // Public demo: only Antun Zebec and Juraj Zebec, not the full real
-  // roster (that stays in the private freespirit repo's config.js).
+  // Public demo: only Antun Zebec, Juraj Zebec and Nika Sikaček, not the
+  // full real roster (that stays in the private freespirit repo's config.js).
   guidesByCity: {
-    zg: ['Antun Zebec', 'Juraj Zebec'],
+    zg: ['Antun Zebec', 'Juraj Zebec', 'Nika Sikaček'],
     du: [],
     zd: [],
     st: [],
