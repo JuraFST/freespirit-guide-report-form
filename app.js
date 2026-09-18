@@ -433,6 +433,15 @@ function showResult(html) {
   document.getElementById('result-message').innerHTML = html;
 }
 
+// pax: trusted, always the numeric value already validated by
+// validateFreeTourFields/validatePaidTourFields before this is called.
+function buildResultMessage_(pax) {
+  var tour = CONFIG.tours.filter(function (t) { return t.code === state.tour; })[0];
+  var tourLabel = tour ? tour.label : state.tour;
+  return 'Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.' +
+    '<span class="result-detail"><strong>' + tourLabel + '</strong> tour &middot; <strong>' + pax + '</strong> pax</span>';
+}
+
 function handleSubmit() {
   hideError('details-error');
   var fields = {
@@ -481,7 +490,7 @@ function handleSubmit() {
     .then(function (result) {
       if (result.ok) {
         clearDraft_();
-        showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
+        showResult(buildResultMessage_(fields.pax));
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -549,7 +558,7 @@ function handlePaidSubmit() {
     .then(function (result) {
       if (result.ok) {
         clearDraft_();
-        showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
+        showResult(buildResultMessage_(fields.pax));
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';

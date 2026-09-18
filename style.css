@@ -148,6 +148,13 @@ h1 {
   margin: 0;
 }
 #result-message strong { font-weight: 700; }
+#result-message .result-detail {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+#result-message .result-detail strong { color: var(--black); }
 
 .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 #city-buttons {
