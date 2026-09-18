@@ -7,6 +7,7 @@ export const CONFIG = {
     { code: 'zd', label: 'Zadar' },
     { code: 'st', label: 'Split' },
   ],
+  // Keep in sync with backend/Constants.gs's GUIDE_DIRECTORY (name+city).
   // Public demo: only Antun Zebec and Juraj Zebec, not the full real
   // roster (that stays in the private freespirit repo's config.js).
   guidesByCity: {
