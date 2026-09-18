@@ -433,13 +433,20 @@ function showResult(html) {
   document.getElementById('result-message').innerHTML = html;
 }
 
-// pax: trusted, always the numeric value already validated by
-// validateFreeTourFields/validatePaidTourFields before this is called.
-function buildResultMessage_(pax) {
+function formatIsoDate_(isoDate) {
+  var match = String(isoDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return isoDate;
+  return match[3] + '.' + match[2] + '.' + match[1] + '.';
+}
+
+// pax/date: trusted, already validated by validateFreeTourFields/
+// validatePaidTourFields before this is called.
+function buildResultMessage_(pax, date) {
   var tour = CONFIG.tours.filter(function (t) { return t.code === state.tour; })[0];
   var tourLabel = tour ? tour.label : state.tour;
   return 'Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.' +
-    '<span class="result-detail"><strong>' + tourLabel + '</strong> tour &middot; <strong>' + pax + '</strong> pax</span>';
+    '<span class="result-detail"><strong>' + tourLabel + '</strong> tour &middot; <strong>' + pax +
+    '</strong> pax &middot; <strong>' + formatIsoDate_(date) + '</strong></span>';
 }
 
 function handleSubmit() {
@@ -490,7 +497,7 @@ function handleSubmit() {
     .then(function (result) {
       if (result.ok) {
         clearDraft_();
-        showResult(buildResultMessage_(fields.pax));
+        showResult(buildResultMessage_(fields.pax, fields.date));
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
@@ -558,7 +565,7 @@ function handlePaidSubmit() {
     .then(function (result) {
       if (result.ok) {
         clearDraft_();
-        showResult(buildResultMessage_(fields.pax));
+        showResult(buildResultMessage_(fields.pax, fields.date));
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
