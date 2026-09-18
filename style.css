@@ -365,6 +365,18 @@ button:focus, input:focus, select:focus { outline: none; }
   line-height: 1.6;
 }
 
+/* Marks the specific field(s) a validation error points at, so a guide
+   doesn't have to read the error text then hunt for the offending input. */
+input.field-invalid, select.field-invalid {
+  border-color: #c0392b;
+}
+.button-row.field-invalid,
+#paid-channel-fields.field-invalid {
+  outline: 2px solid #c0392b;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
 .page-footer {
   margin-top: auto;
   padding: 24px 16px 0;

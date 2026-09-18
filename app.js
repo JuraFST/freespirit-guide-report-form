@@ -218,11 +218,15 @@ function restoreDraft_() {
   if (state.name) nameSelect.value = state.name;
   if (state.tour) document.getElementById('tour-select').value = state.tour;
   if (state.language) {
-    var langBtn = document.querySelector('#language-buttons button[data-code="' + state.language + '"]');
+    var langContainer = document.getElementById('language-buttons');
+    Array.from(langContainer.children).forEach(function (b) { b.classList.remove('selected'); });
+    var langBtn = langContainer.querySelector('button[data-code="' + state.language + '"]');
     if (langBtn) langBtn.classList.add('selected');
   }
   if (state.paidLanguage) {
-    var paidLangBtn = document.querySelector('#paid-language-buttons button[data-code="' + state.paidLanguage + '"]');
+    var paidLangContainer = document.getElementById('paid-language-buttons');
+    Array.from(paidLangContainer.children).forEach(function (b) { b.classList.remove('selected'); });
+    var paidLangBtn = paidLangContainer.querySelector('button[data-code="' + state.paidLanguage + '"]');
     if (paidLangBtn) paidLangBtn.classList.add('selected');
   }
 
@@ -319,10 +323,16 @@ function renderLanguageButtons() {
       state.language = lang.code;
       Array.from(container.children).forEach(function (b) { b.classList.remove('selected'); });
       btn.classList.add('selected');
+      revalidateVisibleStep_();
       saveDraft_();
     });
     container.appendChild(btn);
   });
+  // English covers the overwhelming majority of tours, so default to it
+  // instead of making every guide tap it — still fully overridable.
+  state.language = 'eng';
+  var defaultBtn = container.querySelector('button[data-code="eng"]');
+  if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
 function renderTimeSlots() {
@@ -346,10 +356,15 @@ function renderPaidLanguageButtons() {
       state.paidLanguage = lang.code;
       Array.from(container.children).forEach(function (b) { b.classList.remove('selected'); });
       btn.classList.add('selected');
+      revalidateVisibleStep_();
       saveDraft_();
     });
     container.appendChild(btn);
   });
+  // Same default-to-English reasoning as renderLanguageButtons above.
+  state.paidLanguage = 'eng';
+  var defaultBtn = container.querySelector('button[data-code="eng"]');
+  if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
 function renderPaidTimeSlots() {
@@ -422,6 +437,119 @@ function hideError(elementId) {
   document.getElementById(elementId).classList.add('hidden');
 }
 
+var FREE_ERROR_FIELDS = {
+  language: 'language-buttons',
+  pax: 'pax-input',
+  date: 'date-input',
+  time: 'time-select',
+};
+var PAID_ERROR_FIELDS = {
+  language: 'paid-language-buttons',
+  date: 'paid-date-input',
+  time: 'paid-time-select',
+  pax: 'paid-pax-input',
+  channels: 'paid-channel-fields',
+};
+
+function clearFieldErrors_(fieldMap) {
+  Object.keys(fieldMap).forEach(function (key) {
+    document.getElementById(fieldMap[key]).classList.remove('field-invalid');
+  });
+}
+
+function updateFieldErrorMarks_(fieldMap, errorKeys) {
+  clearFieldErrors_(fieldMap);
+  errorKeys.forEach(function (key) {
+    var id = fieldMap[key];
+    if (id) document.getElementById(id).classList.add('field-invalid');
+  });
+}
+
+// Marks each offending field with a red border/outline and focuses (or, for
+// button-group fields that can't take focus, scrolls to) the first one, so a
+// guide doesn't have to read the error text below the form then hunt for
+// which field it means.
+function applyFieldErrors_(fieldMap, errorKeys) {
+  updateFieldErrorMarks_(fieldMap, errorKeys);
+  var firstId = fieldMap[errorKeys[0]];
+  var firstEl = firstId && document.getElementById(firstId);
+  if (!firstEl) return;
+  if (firstEl.tagName === 'INPUT' || firstEl.tagName === 'SELECT') {
+    firstEl.focus();
+  } else {
+    firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function collectFreeFields_() {
+  return {
+    language: state.language,
+    pax: document.getElementById('pax-input').value,
+    date: document.getElementById('date-input').value,
+    time: document.getElementById('time-select').value,
+    note: document.getElementById('note-input').value,
+  };
+}
+
+function collectPaidFields_() {
+  var channels = {};
+  CONFIG.salesChannels.forEach(function (channel) {
+    channels[channel.code] = document.getElementById('channel-' + channel.code).value;
+  });
+  return {
+    language: state.paidLanguage,
+    date: document.getElementById('paid-date-input').value,
+    time: document.getElementById('paid-time-select').value,
+    pax: document.getElementById('paid-pax-input').value,
+    channels: channels,
+    noShow: document.getElementById('no-show-input').value,
+    note: document.getElementById('paid-note-input').value,
+  };
+}
+
+// Re-runs validation for whichever tour-details step is currently visible
+// and refreshes both the field marks and the error text together, so the
+// two never drift out of sync as a guide fixes fields one at a time. Only
+// acts once a step's error block is already showing (i.e. a Submit was
+// already attempted) — it never surfaces errors on a first pass through
+// untouched fields.
+function revalidateVisibleStep_() {
+  if (!document.getElementById('step-details-free').classList.contains('hidden')) {
+    if (document.getElementById('details-error').classList.contains('hidden')) return;
+    var fields = collectFreeFields_();
+    var errors = validateFreeTourFields(
+      fields,
+      CONFIG.languages.map(function (l) { return l.code; }),
+      CONFIG.timeSlots
+    );
+    var errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+      showError('details-error', errorKeys.map(function (k) { return errors[k]; }));
+      updateFieldErrorMarks_(FREE_ERROR_FIELDS, errorKeys);
+    } else {
+      hideError('details-error');
+      clearFieldErrors_(FREE_ERROR_FIELDS);
+    }
+  } else if (!document.getElementById('step-details-paid').classList.contains('hidden')) {
+    if (document.getElementById('paid-details-error').classList.contains('hidden')) return;
+    var paidFields = collectPaidFields_();
+    var paidErrors = validatePaidTourFields(
+      paidFields,
+      CONFIG.allLanguages.map(function (l) { return l.code; }),
+      CONFIG.timeSlots,
+      CONFIG.salesChannels.map(function (c) { return c.code; })
+    );
+    var paidErrorKeys = Object.keys(paidErrors);
+    if (paidErrorKeys.length > 0) {
+      showError('paid-details-error', paidErrorKeys.map(function (k) { return paidErrors[k]; }));
+      updateFieldErrorMarks_(PAID_ERROR_FIELDS, paidErrorKeys);
+    } else {
+      hideError('paid-details-error');
+      clearFieldErrors_(PAID_ERROR_FIELDS);
+    }
+  }
+}
+
 function firstName_(fullName) {
   return String(fullName || '').trim().split(' ')[0];
 }
@@ -451,13 +579,7 @@ function buildResultMessage_(pax, date) {
 
 function handleSubmit() {
   hideError('details-error');
-  var fields = {
-    language: state.language,
-    pax: document.getElementById('pax-input').value,
-    date: document.getElementById('date-input').value,
-    time: document.getElementById('time-select').value,
-    note: document.getElementById('note-input').value,
-  };
+  var fields = collectFreeFields_();
   var errors = validateFreeTourFields(
     fields,
     CONFIG.languages.map(function (l) { return l.code; }),
@@ -466,8 +588,10 @@ function handleSubmit() {
   var errorKeys = Object.keys(errors);
   if (errorKeys.length > 0) {
     showError('details-error', errorKeys.map(function (k) { return errors[k]; }));
+    applyFieldErrors_(FREE_ERROR_FIELDS, errorKeys);
     return;
   }
+  clearFieldErrors_(FREE_ERROR_FIELDS);
 
   var payload = buildSubmissionPayload({
     city: state.city,
@@ -514,19 +638,7 @@ function handleSubmit() {
 
 function handlePaidSubmit() {
   hideError('paid-details-error');
-  var channels = {};
-  CONFIG.salesChannels.forEach(function (channel) {
-    channels[channel.code] = document.getElementById('channel-' + channel.code).value;
-  });
-  var fields = {
-    language: state.paidLanguage,
-    date: document.getElementById('paid-date-input').value,
-    time: document.getElementById('paid-time-select').value,
-    pax: document.getElementById('paid-pax-input').value,
-    channels: channels,
-    noShow: document.getElementById('no-show-input').value,
-    note: document.getElementById('paid-note-input').value,
-  };
+  var fields = collectPaidFields_();
   var errors = validatePaidTourFields(
     fields,
     CONFIG.allLanguages.map(function (l) { return l.code; }),
@@ -536,8 +648,10 @@ function handlePaidSubmit() {
   var errorKeys = Object.keys(errors);
   if (errorKeys.length > 0) {
     showError('paid-details-error', errorKeys.map(function (k) { return errors[k]; }));
+    applyFieldErrors_(PAID_ERROR_FIELDS, errorKeys);
     return;
   }
+  clearFieldErrors_(PAID_ERROR_FIELDS);
 
   var payload = buildSubmissionPayload({
     city: state.city,
@@ -620,8 +734,12 @@ document.getElementById('paid-photo-input').addEventListener('change', function 
 // etc.) with one listener instead of wiring each field individually — city/
 // name/tour/language picks are saved separately, at their own click/step
 // handlers above, since those don't fire input/change on .card.
-document.querySelector('.card').addEventListener('input', saveDraft_);
-document.querySelector('.card').addEventListener('change', saveDraft_);
+function handleCardFieldChange_() {
+  revalidateVisibleStep_();
+  saveDraft_();
+}
+document.querySelector('.card').addEventListener('input', handleCardFieldChange_);
+document.querySelector('.card').addEventListener('change', handleCardFieldChange_);
 // A reload re-runs restoreDraft_(), which refuses to restore a step-result
 // draft (clearDraft_() already ran on submit success) — so this reliably
 // lands back on a fresh step-city instead of hand-resetting every field.
