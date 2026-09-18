@@ -68,9 +68,11 @@ function updateTitleCityIcon_(show) {
   titleIconVisible = shouldShow;
   var icon = document.getElementById('title-city-icon');
   clearTimeout(titleIconRevealTimer);
+  if (!shouldShow) cancelCityFlight_();
   if (shouldShow) {
     icon.src = src;
     icon.alt = state.city;
+    if (cityFlight) return; // landCityIcon_ reveals it when the flight ends
     icon.style.transition = 'none';
     icon.style.transform = 'translateX(14px)';
     icon.style.opacity = '0';
@@ -85,6 +87,96 @@ function updateTitleCityIcon_(show) {
     icon.style.transform = 'translateX(14px)';
     icon.style.opacity = '0';
   }
+}
+
+// Fly-to-title: when a city is tapped, its landmark lifts off the button and
+// lands on the title icon's spot (FLIP: a fixed clone animated with
+// transform/opacity only). The buttons fade for the first FLY_SWAP_MS, then
+// the step changes under the moving icon; on landing the real title icon
+// takes over in the same frame. Reduced motion skips the flight entirely.
+var FLY_MS = 440;
+var FLY_SWAP_MS = 140;
+var cityFlight = null;
+var CITY_ICON_ASPECT = {};
+
+function preloadCityIcons_() {
+  Object.keys(CITY_ICONS).forEach(function (code) {
+    var img = new Image();
+    img.onload = function () { CITY_ICON_ASPECT[code] = img.naturalWidth / img.naturalHeight; };
+    img.src = CITY_ICONS[code];
+  });
+}
+
+function cancelCityFlight_() {
+  if (!cityFlight) return;
+  clearTimeout(cityFlight.swapTimer);
+  cityFlight.animation.cancel();
+  cityFlight.flyer.remove();
+  cityFlight.container.classList.remove('flying');
+  cityFlight = null;
+}
+
+function landCityIcon_() {
+  var icon = document.getElementById('title-city-icon');
+  if (titleIconVisible) {
+    icon.style.transition = 'none';
+    icon.style.transform = 'translateX(0)';
+    icon.style.opacity = '0.4';
+    void icon.offsetWidth; // apply the landed state before re-enabling the transition
+    icon.style.transition = '';
+  }
+  cityFlight.flyer.remove();
+  cityFlight = null;
+}
+
+function pickCity_(btn, code) {
+  if (cityFlight) return;
+  var aspect = CITY_ICON_ASPECT[code];
+  if (!aspect || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    selectCity(code);
+    return;
+  }
+  var container = btn.parentElement;
+  var r = btn.getBoundingClientRect();
+  var t = document.getElementById('page-title').getBoundingClientRect();
+  var endH = parseFloat(getComputedStyle(document.getElementById('title-city-icon')).height);
+  var end = { w: endH * aspect, h: endH };
+  end.x = t.right - end.w;
+  end.y = t.top + (t.height - endH) / 2;
+  // The watermark is the button's padding box, right-aligned, full height.
+  var startH = r.height - 2;
+  var start = { w: startH * aspect, h: startH };
+  start.x = r.right - 1 - start.w;
+  start.y = r.top + 1;
+
+  var flyer = document.createElement('img');
+  flyer.className = 'city-flyer';
+  flyer.alt = '';
+  flyer.src = CITY_ICONS[code];
+  flyer.style.left = end.x + 'px';
+  flyer.style.top = end.y + 'px';
+  flyer.style.width = end.w + 'px';
+  flyer.style.height = end.h + 'px';
+  document.body.appendChild(flyer);
+  var animation = flyer.animate([
+    {
+      transform: 'translate(' + (start.x - end.x) + 'px, ' + (start.y - end.y) + 'px) scale(' + (start.h / end.h) + ')',
+      opacity: 0.25,
+    },
+    { transform: 'none', opacity: 0.4 },
+  ], { duration: FLY_MS, easing: 'cubic-bezier(0.215, 0.61, 0.355, 1)', fill: 'forwards' });
+
+  container.classList.add('flying');
+  cityFlight = {
+    flyer: flyer,
+    animation: animation,
+    container: container,
+    swapTimer: setTimeout(function () {
+      container.classList.remove('flying'); // step-city is about to be hidden
+      selectCity(code);
+    }, FLY_SWAP_MS),
+  };
+  animation.onfinish = landCityIcon_;
 }
 
 function resetTitlePosition_(titleText) {
@@ -268,12 +360,13 @@ function readPhotoAsBase64_(file, callback) {
 
 function renderCityButtons() {
   var container = document.getElementById('city-buttons');
+  preloadCityIcons_();
   CONFIG.cities.forEach(function (city) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = city.label;
     btn.dataset.code = city.code;
-    btn.addEventListener('click', function () { selectCity(city.code); });
+    btn.addEventListener('click', function () { pickCity_(btn, city.code); });
     container.appendChild(btn);
   });
 }

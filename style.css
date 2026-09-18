@@ -207,6 +207,19 @@ h1 {
   opacity: 0.25;
   pointer-events: none;
 }
+/* Fly-to-title (see pickCity_ in app.js): the buttons fade out while the
+   tapped landmark, cloned as .city-flyer, travels to the title icon. The
+   watermark is dropped instantly because the flyer sits exactly on it. */
+#city-buttons.flying { pointer-events: none; }
+#city-buttons.flying button { opacity: 0; transition: opacity 0.14s ease-out; }
+#city-buttons.flying button::before { opacity: 0; }
+.city-flyer {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform;
+}
 #city-buttons button[data-code="zg"]::before { background-image: url('city-icons/zagreb.png'); }
 #city-buttons button[data-code="du"]::before { background-image: url('city-icons/dubrovnik.png'); }
 #city-buttons button[data-code="zd"]::before { background-image: url('city-icons/zadar.png'); }
@@ -411,7 +424,7 @@ input.field-invalid, select.field-invalid {
    is unchanged. */
 @media (max-width: 600px) {
   :root { --muted: #6b6b6b; }
-  h1 { font-size: 30px; }
+  h1 { font-size: 24px; }
   #result-message { font-size: 18px; }
   #result-message .result-detail { font-size: 16px; }
   input, select { font-size: 16px; }
