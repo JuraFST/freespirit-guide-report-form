@@ -25,7 +25,7 @@ export const CONFIG = {
   // 'free' routes to the free-tour path, everything else to the paid-tour path.
   tours: [
     'free', 'best', 'big', 'food', 'old', 'war',
-  ].map(function (code) { return { code: code, label: code }; }),
+  ].map(function (code) { return { code: code, label: code.charAt(0).toUpperCase() + code.slice(1) }; }),
   // Full language list (evidencija-automation's VALID_LANGUAGES) — paid
   // tours only. Free tours keep using the 2-entry `languages` above.
   allLanguages: [

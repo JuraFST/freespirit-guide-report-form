@@ -223,6 +223,15 @@ h1 {
   -webkit-appearance: none;
   margin: 0;
 }
+.channel-total {
+  margin: -4px 0 20px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.channel-total--match { color: var(--black); }
 .field > label {
   display: block;
   margin-bottom: 4px;

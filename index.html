@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <title>Free Spirit Tour Report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -75,8 +79,8 @@
     <section id="step-details-paid" class="step hidden">
       <h2>Tour details (paid)</h2>
       <div class="field">
-        <label for="paid-language-select">Language</label>
-        <select id="paid-language-select"></select>
+        <label>Language</label>
+        <div id="paid-language-buttons" class="button-row"></div>
       </div>
       <div class="field">
         <label for="paid-date-input">Date</label>
@@ -91,9 +95,10 @@
         <input id="paid-pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div id="paid-channel-fields"></div>
+      <p id="channel-total" class="channel-total"></p>
       <div class="field">
         <label for="no-show-input">No Show</label>
-        <input id="no-show-input" type="text">
+        <input id="no-show-input" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
       </div>
       <div class="field">
         <label for="paid-photo-input">Photo (optional)</label>
@@ -116,7 +121,7 @@
     </section>
   </main>
   <footer class="page-footer">
-    &copy; 2026 Free Spirit Tours &middot; Built by <a href="https://dodai.io" target="_blank" rel="noopener" class="dodai-link"><img src="dodai-logo.svg" alt="dodai" class="dodai-logo"></a>
+    &copy; 2026 Free Spirit Tours &middot; Built by <a href="https://dodai.io" target="_blank" rel="noopener" class="dodai-link"><img src="dodai-logo-flat.svg" alt="dodai" class="dodai-logo"></a>
   </footer>
   <script type="module" src="app.js"></script>
 </body>

@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload } from './formLogic.js';
 
-var state = { city: null, name: null, tour: null, language: null };
+var state = { city: null, name: null, tour: null, language: null, paidLanguage: null };
 
 var STEP_NUMBERS = {
   'step-city': 1,
@@ -152,7 +152,6 @@ function collectDraftFields_() {
     dateFree: document.getElementById('date-input').value,
     timeFree: document.getElementById('time-select').value,
     noteFree: document.getElementById('note-input').value,
-    paidLanguage: document.getElementById('paid-language-select').value,
     paidDate: document.getElementById('paid-date-input').value,
     paidTime: document.getElementById('paid-time-select').value,
     paidPax: document.getElementById('paid-pax-input').value,
@@ -206,6 +205,7 @@ function restoreDraft_() {
   state.name = draft.state.name;
   state.tour = draft.state.tour;
   state.language = draft.state.language;
+  state.paidLanguage = draft.state.paidLanguage;
 
   var nameSelect = document.getElementById('name-select');
   nameSelect.innerHTML = '';
@@ -221,13 +221,16 @@ function restoreDraft_() {
     var langBtn = document.querySelector('#language-buttons button[data-code="' + state.language + '"]');
     if (langBtn) langBtn.classList.add('selected');
   }
+  if (state.paidLanguage) {
+    var paidLangBtn = document.querySelector('#paid-language-buttons button[data-code="' + state.paidLanguage + '"]');
+    if (paidLangBtn) paidLangBtn.classList.add('selected');
+  }
 
   var f = draft.fields || {};
   document.getElementById('pax-input').value = f.paxFree || '';
   document.getElementById('date-input').value = f.dateFree || '';
   if (f.timeFree) document.getElementById('time-select').value = f.timeFree;
   document.getElementById('note-input').value = f.noteFree || '';
-  if (f.paidLanguage) document.getElementById('paid-language-select').value = f.paidLanguage;
   document.getElementById('paid-date-input').value = f.paidDate || '';
   if (f.paidTime) document.getElementById('paid-time-select').value = f.paidTime;
   document.getElementById('paid-pax-input').value = f.paidPax || '';
@@ -237,6 +240,7 @@ function restoreDraft_() {
     var el = document.getElementById('channel-' + code);
     if (el) el.value = f.channels[code];
   });
+  updateChannelTotal();
 
   stepHistory = draft.stepHistory.slice();
   showStep_(savedStep);
@@ -331,13 +335,20 @@ function renderTimeSlots() {
   });
 }
 
-function renderPaidLanguageOptions() {
-  var select = document.getElementById('paid-language-select');
+function renderPaidLanguageButtons() {
+  var container = document.getElementById('paid-language-buttons');
   CONFIG.allLanguages.forEach(function (lang) {
-    var option = document.createElement('option');
-    option.value = lang.code;
-    option.textContent = lang.label;
-    select.appendChild(option);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = lang.label;
+    btn.dataset.code = lang.code;
+    btn.addEventListener('click', function () {
+      state.paidLanguage = lang.code;
+      Array.from(container.children).forEach(function (b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      saveDraft_();
+    });
+    container.appendChild(btn);
   });
 }
 
@@ -367,10 +378,34 @@ function renderChannelFields() {
     input.pattern = '[0-9]*';
     input.placeholder = '0';
     input.id = 'channel-' + channel.code;
+    input.addEventListener('input', updateChannelTotal);
     field.appendChild(label);
     field.appendChild(input);
     container.appendChild(field);
   });
+}
+
+// Live running total so a guide sees a channel-pax/Total-Pax mismatch while
+// typing, instead of only after hitting Submit and reading a validation error.
+function updateChannelTotal() {
+  var totalEl = document.getElementById('channel-total');
+  var statedPaxRaw = document.getElementById('paid-pax-input').value;
+  var channelSum = CONFIG.salesChannels.reduce(function (sum, channel) {
+    var n = parseInt(document.getElementById('channel-' + channel.code).value, 10);
+    return sum + (Number.isInteger(n) ? n : 0);
+  }, 0);
+
+  if (statedPaxRaw === '' && channelSum === 0) {
+    totalEl.textContent = '';
+    totalEl.classList.remove('channel-total--match');
+    return;
+  }
+
+  var statedPax = parseInt(statedPaxRaw, 10);
+  var hasStatedPax = Number.isInteger(statedPax);
+  var matches = hasStatedPax && channelSum === statedPax;
+  totalEl.textContent = (matches ? '✓ ' : '') + channelSum + (hasStatedPax ? ' / ' + statedPax : '') + ' pax entered';
+  totalEl.classList.toggle('channel-total--match', matches);
 }
 
 // message can be a single string (server/network errors) or an array (all
@@ -456,7 +491,8 @@ function handleSubmit() {
     .catch(function (err) {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
-      showError('details-error', 'Network error: ' + err.message);
+      console.error(err);
+      showError('details-error', 'Couldn’t submit. Check your connection and try again.');
     });
 }
 
@@ -467,7 +503,7 @@ function handlePaidSubmit() {
     channels[channel.code] = document.getElementById('channel-' + channel.code).value;
   });
   var fields = {
-    language: document.getElementById('paid-language-select').value,
+    language: state.paidLanguage,
     date: document.getElementById('paid-date-input').value,
     time: document.getElementById('paid-time-select').value,
     pax: document.getElementById('paid-pax-input').value,
@@ -523,7 +559,8 @@ function handlePaidSubmit() {
     .catch(function (err) {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
-      showError('paid-details-error', 'Network error: ' + err.message);
+      console.error(err);
+      showError('paid-details-error', 'Couldn’t submit. Check your connection and try again.');
     });
 }
 
@@ -539,13 +576,14 @@ renderCityButtons();
 renderLanguageButtons();
 renderTimeSlots();
 renderTourOptions();
-renderPaidLanguageOptions();
+renderPaidLanguageButtons();
 renderPaidTimeSlots();
 renderChannelFields();
 document.getElementById('name-continue').addEventListener('click', goToTourStep);
 document.getElementById('tour-continue').addEventListener('click', goToTourDetails);
 document.getElementById('submit-button').addEventListener('click', handleSubmit);
 document.getElementById('paid-submit-button').addEventListener('click', handlePaidSubmit);
+document.getElementById('paid-pax-input').addEventListener('input', updateChannelTotal);
 document.getElementById('back-button').addEventListener('click', goBack);
 ['date-input', 'paid-date-input'].forEach(function (id) {
   document.getElementById(id).addEventListener('click', function () {
