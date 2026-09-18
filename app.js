@@ -12,6 +12,80 @@ var STEP_NUMBERS = {
 };
 var TOTAL_STEPS = 4;
 var stepHistory = ['step-city'];
+var backButtonVisible = false;
+var titleIconVisible = false;
+var backButtonRevealTimer = null;
+var titleIconRevealTimer = null;
+
+// Slides the back button in from the left the first time it appears, and
+// back out to the left (retracing the same path) when stepHistory drops
+// back to the first step, instead of the old instant visibility toggle.
+// No-ops on steps where it's already showing (step 2 -> 3 -> 4), so it
+// only animates at the true boundary.
+function updateBackButton_() {
+  var shouldShow = stepHistory.length > 1;
+  if (shouldShow === backButtonVisible) return;
+  backButtonVisible = shouldShow;
+  var btn = document.getElementById('back-button');
+  clearTimeout(backButtonRevealTimer);
+  if (shouldShow) {
+    btn.style.transition = 'none';
+    btn.style.transform = 'translateX(-14px)';
+    btn.style.opacity = '0';
+    void btn.offsetWidth; // force reflow so the left start position applies before animating in
+    btn.style.transition = '';
+    // Held for a beat before sliding in, so it doesn't compete with the
+    // step's own fade-in for attention.
+    backButtonRevealTimer = setTimeout(function () {
+      btn.style.pointerEvents = 'auto';
+      btn.style.transform = 'translateX(0)';
+      btn.style.opacity = '1';
+    }, 200);
+  } else {
+    btn.style.pointerEvents = 'none';
+    btn.style.transform = 'translateX(-14px)';
+    btn.style.opacity = '0';
+  }
+}
+
+var CITY_ICONS = {
+  zg: 'city-icons/zagreb.png',
+  du: 'city-icons/dubrovnik.png',
+  zd: 'city-icons/zadar.png',
+  st: 'city-icons/split.png',
+};
+
+// Shows the chosen city's landmark icon on the "Tour Log" title row, once a
+// city has been picked. Hidden back on step-city itself (in case a
+// different city gets picked) and on step-result, where the title becomes
+// "Upisano! :)". Mirrors updateBackButton_'s slide, but from/to the right,
+// since the icon sits on the opposite side of the header — and likewise
+// only animates at the true show/hide boundary, not on every step.
+function updateTitleCityIcon_(show) {
+  var src = show && CITY_ICONS[state.city];
+  var shouldShow = !!src;
+  if (shouldShow === titleIconVisible) return;
+  titleIconVisible = shouldShow;
+  var icon = document.getElementById('title-city-icon');
+  clearTimeout(titleIconRevealTimer);
+  if (shouldShow) {
+    icon.src = src;
+    icon.alt = state.city;
+    icon.style.transition = 'none';
+    icon.style.transform = 'translateX(14px)';
+    icon.style.opacity = '0';
+    void icon.offsetWidth; // force reflow so the right start position applies before animating in
+    icon.style.transition = '';
+    titleIconRevealTimer = setTimeout(function () {
+      icon.style.transform = 'translateX(0)';
+      icon.style.opacity = '0.4';
+    }, 400);
+  } else {
+    icon.style.transition = '';
+    icon.style.transform = 'translateX(14px)';
+    icon.style.opacity = '0';
+  }
+}
 
 function resetTitlePosition_(titleText) {
   titleText.style.transition = 'none';
@@ -38,6 +112,7 @@ function showStep_(id) {
     titleText.style.transform = 'translateX(' + offset + 'px)';
     navRow.classList.add('hidden');
     progressTrack.classList.add('hidden');
+    updateTitleCityIcon_(false);
     return;
   }
   titleText.textContent = 'Tour Log';
@@ -45,10 +120,12 @@ function showStep_(id) {
   titleText.style.transition = '';
   navRow.classList.remove('hidden');
   progressTrack.classList.remove('hidden');
-  document.getElementById('back-button').style.visibility = stepHistory.length > 1 ? 'visible' : 'hidden';
+  updateBackButton_();
+  updateTitleCityIcon_(id !== 'step-city');
   var stepNumber = STEP_NUMBERS[id] || 1;
   document.getElementById('progress-label').textContent = 'Step ' + stepNumber + ' of ' + TOTAL_STEPS;
   document.getElementById('progress-fill').style.width = (stepNumber / TOTAL_STEPS * 100) + '%';
+  saveDraft_();
 }
 
 function goToStep(id) {
@@ -60,6 +137,110 @@ function goBack() {
   if (stepHistory.length <= 1) return;
   stepHistory.pop();
   showStep_(stepHistory[stepHistory.length - 1]);
+}
+
+var DRAFT_KEY = 'freespirit-tour-log-draft';
+
+// Snapshots everything the guide has typed into step-4 (free or paid, doesn't
+// matter which is currently shown — reading both is cheap and simpler than
+// tracking which one's active). Photos are deliberately excluded: they're
+// base64'd already and could be a few MB, risking a quota error on
+// localStorage.setItem for the rest of the draft too.
+function collectDraftFields_() {
+  return {
+    paxFree: document.getElementById('pax-input').value,
+    dateFree: document.getElementById('date-input').value,
+    timeFree: document.getElementById('time-select').value,
+    noteFree: document.getElementById('note-input').value,
+    paidLanguage: document.getElementById('paid-language-select').value,
+    paidDate: document.getElementById('paid-date-input').value,
+    paidTime: document.getElementById('paid-time-select').value,
+    paidPax: document.getElementById('paid-pax-input').value,
+    channels: CONFIG.salesChannels.reduce(function (acc, c) {
+      var el = document.getElementById('channel-' + c.code);
+      acc[c.code] = el ? el.value : '';
+      return acc;
+    }, {}),
+    noShow: document.getElementById('no-show-input').value,
+    paidNote: document.getElementById('paid-note-input').value,
+  };
+}
+
+// Nothing worth saving until a city's picked, and that also keeps this from
+// ever needing to run before renderChannelFields()/etc. have built the DOM
+// it reads from.
+function saveDraft_() {
+  if (!state.city) return;
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      state: state,
+      stepHistory: stepHistory,
+      fields: collectDraftFields_(),
+    }));
+  } catch (e) {
+    // Storage full or unavailable (e.g. private browsing) — the draft
+    // just won't persist; nothing else about the form is affected.
+  }
+}
+
+function clearDraft_() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+}
+
+// Restores a saved draft on load, if there's one worth restoring (a city
+// was picked and the guide got past step-city). Returns true if it did, so
+// the caller knows whether to fall back to the normal step-city start.
+function restoreDraft_() {
+  var raw;
+  try { raw = localStorage.getItem(DRAFT_KEY); } catch (e) { return false; }
+  if (!raw) return false;
+  var draft;
+  try { draft = JSON.parse(raw); } catch (e) { return false; }
+  var savedStep = draft.stepHistory && draft.stepHistory[draft.stepHistory.length - 1];
+  if (!draft.state || !draft.state.city || !Array.isArray(draft.stepHistory) ||
+      !savedStep || savedStep === 'step-city' || savedStep === 'step-result') {
+    return false;
+  }
+
+  state.city = draft.state.city;
+  state.name = draft.state.name;
+  state.tour = draft.state.tour;
+  state.language = draft.state.language;
+
+  var nameSelect = document.getElementById('name-select');
+  nameSelect.innerHTML = '';
+  (CONFIG.guidesByCity[state.city] || []).forEach(function (name) {
+    var option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    nameSelect.appendChild(option);
+  });
+  if (state.name) nameSelect.value = state.name;
+  if (state.tour) document.getElementById('tour-select').value = state.tour;
+  if (state.language) {
+    var langBtn = document.querySelector('#language-buttons button[data-code="' + state.language + '"]');
+    if (langBtn) langBtn.classList.add('selected');
+  }
+
+  var f = draft.fields || {};
+  document.getElementById('pax-input').value = f.paxFree || '';
+  document.getElementById('date-input').value = f.dateFree || '';
+  if (f.timeFree) document.getElementById('time-select').value = f.timeFree;
+  document.getElementById('note-input').value = f.noteFree || '';
+  if (f.paidLanguage) document.getElementById('paid-language-select').value = f.paidLanguage;
+  document.getElementById('paid-date-input').value = f.paidDate || '';
+  if (f.paidTime) document.getElementById('paid-time-select').value = f.paidTime;
+  document.getElementById('paid-pax-input').value = f.paidPax || '';
+  document.getElementById('no-show-input').value = f.noShow || '';
+  document.getElementById('paid-note-input').value = f.paidNote || '';
+  Object.keys(f.channels || {}).forEach(function (code) {
+    var el = document.getElementById('channel-' + code);
+    if (el) el.value = f.channels[code];
+  });
+
+  stepHistory = draft.stepHistory.slice();
+  showStep_(savedStep);
+  return true;
 }
 
 function readPhotoAsBase64_(file, callback) {
@@ -134,6 +315,7 @@ function renderLanguageButtons() {
       state.language = lang.code;
       Array.from(container.children).forEach(function (b) { b.classList.remove('selected'); });
       btn.classList.add('selected');
+      saveDraft_();
     });
     container.appendChild(btn);
   });
@@ -183,6 +365,7 @@ function renderChannelFields() {
     input.step = '1';
     input.inputMode = 'numeric';
     input.pattern = '[0-9]*';
+    input.placeholder = '0';
     input.id = 'channel-' + channel.code;
     field.appendChild(label);
     field.appendChild(input);
@@ -190,14 +373,18 @@ function renderChannelFields() {
   });
 }
 
-function showError(message) {
-  var el = document.getElementById('details-error');
-  el.textContent = message;
+// message can be a single string (server/network errors) or an array (all
+// validation errors at once, so a guide doesn't have to resubmit repeatedly
+// to discover each missing field one at a time).
+function showError(elementId, message) {
+  var el = document.getElementById(elementId);
+  var lines = Array.isArray(message) ? message : [message];
+  el.textContent = lines.join('\n');
   el.classList.remove('hidden');
 }
 
-function hideError() {
-  document.getElementById('details-error').classList.add('hidden');
+function hideError(elementId) {
+  document.getElementById(elementId).classList.add('hidden');
 }
 
 function firstName_(fullName) {
@@ -212,7 +399,7 @@ function showResult(html) {
 }
 
 function handleSubmit() {
-  hideError();
+  hideError('details-error');
   var fields = {
     language: state.language,
     pax: document.getElementById('pax-input').value,
@@ -227,7 +414,7 @@ function handleSubmit() {
   );
   var errorKeys = Object.keys(errors);
   if (errorKeys.length > 0) {
-    showError(errors[errorKeys[0]]);
+    showError('details-error', errorKeys.map(function (k) { return errors[k]; }));
     return;
   }
 
@@ -258,22 +445,23 @@ function handleSubmit() {
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (result.ok) {
+        clearDraft_();
         showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
-        showError(result.error || 'Submission failed, try again.');
+        showError('details-error', result.error || 'Submission failed, try again.');
       }
     })
     .catch(function (err) {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
-      showError('Network error: ' + err.message);
+      showError('details-error', 'Network error: ' + err.message);
     });
 }
 
 function handlePaidSubmit() {
-  document.getElementById('paid-details-error').classList.add('hidden');
+  hideError('paid-details-error');
   var channels = {};
   CONFIG.salesChannels.forEach(function (channel) {
     channels[channel.code] = document.getElementById('channel-' + channel.code).value;
@@ -295,8 +483,7 @@ function handlePaidSubmit() {
   );
   var errorKeys = Object.keys(errors);
   if (errorKeys.length > 0) {
-    document.getElementById('paid-details-error').textContent = errors[errorKeys[0]];
-    document.getElementById('paid-details-error').classList.remove('hidden');
+    showError('paid-details-error', errorKeys.map(function (k) { return errors[k]; }));
     return;
   }
 
@@ -325,19 +512,18 @@ function handlePaidSubmit() {
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (result.ok) {
+        clearDraft_();
         showResult('Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.');
       } else {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit';
-        document.getElementById('paid-details-error').textContent = result.error || 'Submission failed, try again.';
-        document.getElementById('paid-details-error').classList.remove('hidden');
+        showError('paid-details-error', result.error || 'Submission failed, try again.');
       }
     })
     .catch(function (err) {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
-      document.getElementById('paid-details-error').textContent = 'Network error: ' + err.message;
-      document.getElementById('paid-details-error').classList.remove('hidden');
+      showError('paid-details-error', 'Network error: ' + err.message);
     });
 }
 
@@ -376,4 +562,10 @@ document.getElementById('paid-photo-input').addEventListener('change', function 
   document.getElementById('paid-photo-filename').textContent = file ? file.name : 'No file chosen';
   readPhotoAsBase64_(file, function (photo) { state.paidPhoto = photo; });
 });
-showStep_('step-city');
+// Covers every typed/selected field on step 4 (pax, date, note, channel pax,
+// etc.) with one listener instead of wiring each field individually — city/
+// name/tour/language picks are saved separately, at their own click/step
+// handlers above, since those don't fire input/change on .card.
+document.querySelector('.card').addEventListener('input', saveDraft_);
+document.querySelector('.card').addEventListener('change', saveDraft_);
+if (!restoreDraft_()) showStep_('step-city');

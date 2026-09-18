@@ -11,8 +11,14 @@ body {
   color: var(--black);
   margin: 0;
   padding: 24px 16px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 h1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-family: 'Playfair Display', serif;
   font-weight: 600;
   font-size: 28px;
@@ -26,7 +32,18 @@ h1 {
   display: inline-block;
   transition: transform 3s ease;
 }
+/* Resting state doubles as the "hidden" state, mirroring #back-button's
+   pattern but sliding from/to the right instead of the left (this icon
+   sits on the opposite side of the header) — see updateTitleCityIcon_. */
+.title-city-icon {
+  height: 40px;
+  width: auto;
+  opacity: 0;
+  transform: translateX(14px);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
 .card {
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background: var(--white);
@@ -61,8 +78,9 @@ h1 {
 }
 .link-button {
   background: none;
-  border: none;
-  padding: 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 12px;
   min-height: 44px;
   font-family: 'Montserrat', sans-serif;
   font-weight: 600;
@@ -73,6 +91,16 @@ h1 {
   cursor: pointer;
 }
 .link-button:hover { text-decoration: underline; }
+/* Resting state doubles as the "hidden" state: back-button starts here on
+   page load (no history yet), and returns here when stepHistory drops back
+   to the first step, retracing the same left-side path it slid in from
+   (see updateBackButton_ in app.js). */
+#back-button {
+  opacity: 0;
+  transform: translateX(-14px);
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
 .progress-label {
   font-size: 11px;
   letter-spacing: 0.05em;
@@ -165,6 +193,36 @@ h1 {
 #city-buttons button[data-code="st"]::before { background-image: url('city-icons/split.png'); }
 
 .field { margin: 20px 0; }
+/* Channel breakdown: compact label-left/input-right rows instead of the
+   usual stacked field, since it's 5 near-identical numeric fields in a row
+   — a tally list reads faster here than 5 full-height form fields. */
+#paid-channel-fields .field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+}
+#paid-channel-fields .field > label {
+  margin-bottom: 0;
+}
+/* Chrome reserves layout space for the spin-button arrows even when they're
+   only drawn on hover/focus — in a box this narrow that reserved gutter eats
+   enough width to throw off text-align: right. Hiding the arrows removes it;
+   a headcount field doesn't need them anyway. */
+#paid-channel-fields .field > input {
+  width: 52px;
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+#paid-channel-fields .field > input::-webkit-outer-spin-button,
+#paid-channel-fields .field > input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .field > label {
   display: block;
   margin-bottom: 4px;
@@ -286,14 +344,21 @@ button:focus, input:focus, select:focus { outline: none; }
   padding: 10px 12px;
   font-size: 13px;
   margin: 16px 0;
+  white-space: pre-line;
+  line-height: 1.6;
 }
 
-.attribution {
-  max-width: 480px;
-  margin: 12px auto 0;
-  padding: 0 28px;
+.page-footer {
+  margin-top: auto;
+  padding: 24px 16px 0;
   font-size: 11px;
   color: var(--muted);
   text-align: center;
 }
-.attribution a { color: var(--muted); }
+.dodai-logo {
+  height: 1.5em;
+  width: auto;
+  vertical-align: -0.15em;
+  opacity: 0.85;
+}
+.dodai-link:hover .dodai-logo { opacity: 1; }

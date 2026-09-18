@@ -8,7 +8,7 @@ export const CONFIG = {
     { code: 'st', label: 'Split' },
   ],
   // Public demo: only Antun Zebec and Juraj Zebec, not the full real
-  // roster (that stays in the private repo's config.js).
+  // roster (that stays in the private freespirit repo's config.js).
   guidesByCity: {
     zg: ['Antun Zebec', 'Juraj Zebec'],
     du: [],
@@ -39,11 +39,11 @@ export const CONFIG = {
   ],
   // Paid-tour sales channels — keys match backend/Constants.gs's CHANNEL_MAP.
   salesChannels: [
-    { code: 'web', label: 'Pax s Weba' },
-    { code: 'viator', label: 'Pax s Viatora' },
-    { code: 'gyg', label: 'Pax s GYG-a' },
-    { code: 'airbnb', label: 'Pax s Airbnba' },
-    { code: 'musement', label: 'Pax s Musementa' },
+    { code: 'web', label: 'Pax - Web' },
+    { code: 'airbnb', label: 'Pax - Airbnb' },
+    { code: 'gyg', label: 'Pax - GYG' },
+    { code: 'musement', label: 'Pax - Musement' },
+    { code: 'viator', label: 'Pax - Viator' },
   ],
   // Keep in sync with backend/Constants.gs's TIME_SLOTS.
   timeSlots: buildHalfHourSlots(8, 20),
