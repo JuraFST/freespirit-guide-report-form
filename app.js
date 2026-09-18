@@ -492,7 +492,7 @@ function handleSubmit() {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
       console.error(err);
-      showError('details-error', 'Couldn’t submit. Check your connection and try again.');
+      showError('details-error', 'Couldn’t confirm your submission went through. Check your email for a confirmation before submitting again.');
     });
 }
 
@@ -560,7 +560,7 @@ function handlePaidSubmit() {
       submitButton.disabled = false;
       submitButton.textContent = 'Submit';
       console.error(err);
-      showError('paid-details-error', 'Couldn’t submit. Check your connection and try again.');
+      showError('paid-details-error', 'Couldn’t confirm your submission went through. Check your email for a confirmation before submitting again.');
     });
 }
 
