@@ -214,6 +214,10 @@ function showStep_(id) {
   progressTrack.classList.remove('hidden');
   updateBackButton_();
   updateTitleCityIcon_(id !== 'step-city');
+  if (id === 'step-tour') {
+    var cityLabel = CONFIG.cities.filter(function (c) { return c.code === state.city; })[0];
+    document.getElementById('who-line-text').textContent = state.name + ' · ' + (cityLabel ? cityLabel.label : state.city);
+  }
   var stepNumber = STEP_NUMBERS[id] || 1;
   document.getElementById('progress-label').textContent = 'Step ' + stepNumber + ' of ' + TOTAL_STEPS;
   document.getElementById('progress-fill').style.width = (stepNumber / TOTAL_STEPS * 100) + '%';
@@ -371,22 +375,52 @@ function renderCityButtons() {
   });
 }
 
-function selectCity(code) {
-  state.city = code;
+function fillNameOptions_(code) {
   var select = document.getElementById('name-select');
   select.innerHTML = '';
-  var guides = CONFIG.guidesByCity[code] || [];
-  guides.forEach(function (name) {
+  (CONFIG.guidesByCity[code] || []).forEach(function (name) {
     var option = document.createElement('option');
     option.value = name;
     option.textContent = name;
     select.appendChild(option);
   });
+}
+
+function selectCity(code) {
+  state.city = code;
+  fillNameOptions_(code);
   goToStep('step-name');
+}
+
+// The guide's city and name are remembered on this phone (localStorage only,
+// nothing leaves the device) so later visits open on the tour step. Kept
+// apart from the draft, which submitting a report clears. Guides don't
+// change city, so "Not you?" (new phone owner, wrong first pick) is the only
+// way back to the city step.
+var GUIDE_KEY = 'freespirit-guide';
+
+function rememberGuide_() {
+  try { localStorage.setItem(GUIDE_KEY, JSON.stringify({ city: state.city, name: state.name })); } catch (e) {}
+}
+
+function startFromRememberedGuide_() {
+  var saved;
+  try { saved = JSON.parse(localStorage.getItem(GUIDE_KEY)); } catch (e) { return false; }
+  // A guide dropped from the roster (or a changed name) falls back to the
+  // normal city step rather than logging as someone who's no longer listed.
+  if (!saved || (CONFIG.guidesByCity[saved.city] || []).indexOf(saved.name) === -1) return false;
+  state.city = saved.city;
+  state.name = saved.name;
+  fillNameOptions_(saved.city);
+  document.getElementById('name-select').value = saved.name;
+  stepHistory = ['step-city', 'step-name', 'step-tour'];
+  showStep_('step-tour');
+  return true;
 }
 
 function goToTourStep() {
   state.name = document.getElementById('name-select').value;
+  rememberGuide_();
   goToStep('step-tour');
 }
 
@@ -876,4 +910,9 @@ document.querySelector('.card').addEventListener('change', handleCardFieldChange
 document.getElementById('log-another-button').addEventListener('click', function () {
   location.reload();
 });
-if (!restoreDraft_()) showStep_('step-city');
+document.getElementById('not-you-button').addEventListener('click', function () {
+  try { localStorage.removeItem(GUIDE_KEY); } catch (e) {}
+  clearDraft_(); // otherwise the reload would restore this guide's draft
+  location.reload();
+});
+if (!restoreDraft_() && !startFromRememberedGuide_()) showStep_('step-city');

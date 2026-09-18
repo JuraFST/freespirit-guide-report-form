@@ -225,6 +225,31 @@ h1 {
 #city-buttons button[data-code="zd"]::before { background-image: url('city-icons/zadar.png'); }
 #city-buttons button[data-code="st"]::before { background-image: url('city-icons/split.png'); }
 
+/* Tour step: who the report will be logged as, with a way out. */
+.who-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 20px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.who-link {
+  background: none;
+  border: 0;
+  min-height: 44px;
+  padding: 0 0 0 12px;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--black);
+  text-decoration: underline;
+  white-space: nowrap;
+  flex: none;
+  cursor: pointer;
+}
+
 .field { margin: 20px 0; }
 /* Channel breakdown: compact label-left/input-right rows instead of the
    usual stacked field, since it's 5 near-identical numeric fields in a row
@@ -430,6 +455,7 @@ input.field-invalid, select.field-invalid {
   input, select { font-size: 16px; }
   .file-name, .error { font-size: 15px; }
   .today-date,
+  .who-line,
   .link-button,
   .step h2,
   .button-row button, #city-buttons button,
