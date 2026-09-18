@@ -404,3 +404,27 @@ input.field-invalid, select.field-invalid {
   opacity: 0.85;
 }
 .dodai-link:hover .dodai-logo { opacity: 1; }
+
+/* Mobile: +2px on font sizes (3px for the small language buttons); inputs 16px so iOS Safari doesn't zoom
+   the page when a field is focused. Muted text is darkened for outdoor
+   legibility (#9e9e9e is 2.7:1 on white, #6b6b6b is 5.3:1). Desktop above
+   is unchanged. */
+@media (max-width: 600px) {
+  :root { --muted: #6b6b6b; }
+  h1 { font-size: 30px; }
+  #result-message { font-size: 18px; }
+  #result-message .result-detail { font-size: 16px; }
+  input, select { font-size: 16px; }
+  .file-name, .error { font-size: 15px; }
+  .today-date,
+  .link-button,
+  .step h2,
+  .button-row button, #city-buttons button,
+  .channel-total,
+  .field > label,
+  .button-row--compact button,
+  .file-button,
+  #submit-button, #paid-submit-button, #name-continue, #tour-continue, #log-another-button { font-size: 14px; }
+  .progress-label,
+  .page-footer { font-size: 13px; }
+}

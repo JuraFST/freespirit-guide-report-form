@@ -328,16 +328,11 @@ function renderLanguageButtons() {
     });
     container.appendChild(btn);
   });
-  // English covers the overwhelming majority of tours, so default to it
-  // instead of making every guide tap it — still fully overridable.
-  state.language = 'eng';
-  var defaultBtn = container.querySelector('button[data-code="eng"]');
-  if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
-// A real time has to be picked — no default, since unlike language it
-// varies tour to tour and a silently-wrong default (the browser otherwise
-// shows the first option as selected) could get submitted unnoticed.
+// Like language, a real time has to be picked — no default, since a
+// silently-wrong default (the browser otherwise shows the first option as
+// selected) could get submitted unnoticed.
 function addTimePlaceholder_(select) {
   var placeholder = document.createElement('option');
   placeholder.value = '';
@@ -406,11 +401,6 @@ function renderPaidLanguageButtons() {
 
   wrapper.appendChild(primaryRow);
   secondaryRows.forEach(function (row) { wrapper.appendChild(row); });
-
-  // Same default-to-English reasoning as renderLanguageButtons above.
-  state.paidLanguage = 'eng';
-  var defaultBtn = wrapper.querySelector('button[data-code="eng"]');
-  if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
 function renderPaidTimeSlots() {
