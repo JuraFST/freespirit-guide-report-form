@@ -335,8 +335,21 @@ function renderLanguageButtons() {
   if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
+// A real time has to be picked — no default, since unlike language it
+// varies tour to tour and a silently-wrong default (the browser otherwise
+// shows the first option as selected) could get submitted unnoticed.
+function addTimePlaceholder_(select) {
+  var placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select time';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+}
+
 function renderTimeSlots() {
   var select = document.getElementById('time-select');
+  addTimePlaceholder_(select);
   CONFIG.timeSlots.forEach(function (slot) {
     var option = document.createElement('option');
     option.value = slot;
@@ -402,6 +415,7 @@ function renderPaidLanguageButtons() {
 
 function renderPaidTimeSlots() {
   var select = document.getElementById('paid-time-select');
+  addTimePlaceholder_(select);
   CONFIG.timeSlots.forEach(function (slot) {
     var option = document.createElement('option');
     option.value = slot;
