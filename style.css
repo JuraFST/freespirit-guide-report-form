@@ -178,6 +178,18 @@ h1 {
 }
 .button-row button.selected, #city-buttons button.selected { background: var(--black); color: var(--white); }
 
+/* Secondary paid-tour languages (everything past English/Español) render
+   smaller and muted, since those two cover the overwhelming majority of
+   tours and shouldn't compete visually with the rare picks below them. */
+.button-row--compact button {
+  min-height: 36px;
+  padding: 6px 4px;
+  font-size: 11px;
+  border-color: var(--muted);
+  color: var(--muted);
+}
+.button-row--compact button.selected { border-color: var(--black); }
+
 /* Per-city landmark watermark (Flaticon "Croatia" pack, free tier — see
    README for required attribution). Low-opacity ::before so it sits behind
    the button's own text/border painting, not affecting them. */
@@ -371,7 +383,8 @@ input.field-invalid, select.field-invalid {
   border-color: #c0392b;
 }
 .button-row.field-invalid,
-#paid-channel-fields.field-invalid {
+#paid-channel-fields.field-invalid,
+#paid-language-buttons.field-invalid {
   outline: 2px solid #c0392b;
   outline-offset: 4px;
   border-radius: 4px;

@@ -225,7 +225,7 @@ function restoreDraft_() {
   }
   if (state.paidLanguage) {
     var paidLangContainer = document.getElementById('paid-language-buttons');
-    Array.from(paidLangContainer.children).forEach(function (b) { b.classList.remove('selected'); });
+    paidLangContainer.querySelectorAll('button').forEach(function (b) { b.classList.remove('selected'); });
     var paidLangBtn = paidLangContainer.querySelector('button[data-code="' + state.paidLanguage + '"]');
     if (paidLangBtn) paidLangBtn.classList.add('selected');
   }
@@ -345,25 +345,58 @@ function renderTimeSlots() {
   });
 }
 
+// English/Español cover the overwhelming majority of paid tours, so they
+// get their own full-size row; the rest render smaller in a row below.
+var PAID_PRIMARY_LANGUAGES = ['eng', 'esp'];
+
+// Rows of 3 fixed-width-to-content secondary buttons instead of one
+// wrapping row, so the layout doesn't depend on the browser's wrap point
+// (which gave an unbalanced 4+1 split at some widths) and buttons stay
+// sized to their own text instead of stretching to fill a grid column.
+var SECONDARY_ROW_SIZE = 3;
+
 function renderPaidLanguageButtons() {
-  var container = document.getElementById('paid-language-buttons');
-  CONFIG.allLanguages.forEach(function (lang) {
+  var wrapper = document.getElementById('paid-language-buttons');
+  var primaryRow = document.createElement('div');
+  primaryRow.className = 'button-row';
+  var secondaryLanguages = CONFIG.allLanguages.filter(function (lang) {
+    return PAID_PRIMARY_LANGUAGES.indexOf(lang.code) === -1;
+  });
+  var secondaryRows = [];
+
+  function makeBtn(lang) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = lang.label;
     btn.dataset.code = lang.code;
     btn.addEventListener('click', function () {
       state.paidLanguage = lang.code;
-      Array.from(container.children).forEach(function (b) { b.classList.remove('selected'); });
+      wrapper.querySelectorAll('button').forEach(function (b) { b.classList.remove('selected'); });
       btn.classList.add('selected');
       revalidateVisibleStep_();
       saveDraft_();
     });
-    container.appendChild(btn);
+    return btn;
+  }
+
+  CONFIG.allLanguages.forEach(function (lang) {
+    if (PAID_PRIMARY_LANGUAGES.indexOf(lang.code) !== -1) primaryRow.appendChild(makeBtn(lang));
   });
+  secondaryLanguages.forEach(function (lang, i) {
+    if (i % SECONDARY_ROW_SIZE === 0) {
+      var row = document.createElement('div');
+      row.className = 'button-row button-row--compact';
+      secondaryRows.push(row);
+    }
+    secondaryRows[secondaryRows.length - 1].appendChild(makeBtn(lang));
+  });
+
+  wrapper.appendChild(primaryRow);
+  secondaryRows.forEach(function (row) { wrapper.appendChild(row); });
+
   // Same default-to-English reasoning as renderLanguageButtons above.
   state.paidLanguage = 'eng';
-  var defaultBtn = container.querySelector('button[data-code="eng"]');
+  var defaultBtn = wrapper.querySelector('button[data-code="eng"]');
   if (defaultBtn) defaultBtn.classList.add('selected');
 }
 
