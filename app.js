@@ -615,4 +615,10 @@ document.getElementById('paid-photo-input').addEventListener('change', function 
 // handlers above, since those don't fire input/change on .card.
 document.querySelector('.card').addEventListener('input', saveDraft_);
 document.querySelector('.card').addEventListener('change', saveDraft_);
+// A reload re-runs restoreDraft_(), which refuses to restore a step-result
+// draft (clearDraft_() already ran on submit success) — so this reliably
+// lands back on a fresh step-city instead of hand-resetting every field.
+document.getElementById('log-another-button').addEventListener('click', function () {
+  location.reload();
+});
 if (!restoreDraft_()) showStep_('step-city');
