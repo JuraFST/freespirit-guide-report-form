@@ -10,7 +10,7 @@ export const CONFIG = {
   // Keep in sync with backend/Constants.gs's GUIDE_DIRECTORY (name+city).
   guidesByCity: {
     zg: [
-      'Antun Zebec', 'Juraj Zebec', 'Nika Sikaček', 'Antonio Sičić',
+      'Juraj Zebec', 'Antonio Sičić',
       'Darko Crnolatac', 'Diana Bolić', 'Dora Mlinarek Dominik',
       'Doris Cvetko Pavišić', 'Iva Pavlović', 'Ivana Čakarić',
       'Katarina Novoselac', 'Katija Crnčević', 'Kristina Božić',
