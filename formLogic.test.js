@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts } from './formLogic.js';
 
 test('validateFreeTourFields rejects unknown language', () => {
   var errors = validateFreeTourFields(
@@ -107,4 +107,47 @@ test('validatePaidTourFields accepts a fully valid set with no errors', () => {
     ['eng'], ['10:00'], ['web', 'viator']
   );
   assert.deepEqual(errors, {});
+});
+
+var OK = { language: 'eng', date: '2026-09-20', time: '10:00' };
+var SLOTS = ['10:00'];
+var LANGS = ['eng'];
+
+test('flowForTour routes war and food to their own flows, war PR stays paid', () => {
+  assert.equal(flowForTour('free'), 'free');
+  assert.equal(flowForTour('war'), 'war');
+  assert.equal(flowForTour('food'), 'food');
+  assert.equal(flowForTour('food PR'), 'food');
+  assert.equal(flowForTour('war PR'), 'paid');
+  assert.equal(flowForTour('best'), 'paid');
+});
+
+test('war: sellers break down Pax - Free, payment split must match sellers', () => {
+  var base = Object.assign({}, OK, {
+    pax: '7', channels: { web: '4', free: '3' },
+    sellers: [{ name: 'Ana', pax: '2' }, { name: 'Vid', pax: '1' }, { name: '', pax: '' }],
+    payments: { cash: '2', card: '1', other: '' },
+  });
+  assert.deepEqual(validatePaidTourFields(base, LANGS, SLOTS, ['web', 'free']), {});
+  base.sellers = [{ name: 'Ana', pax: '1' }];
+  base.payments = { cash: '1' };
+  assert.equal(validatePaidTourFields(base, LANGS, SLOTS, ['web', 'free']).sellers, 'Sold by pax must add up to Pax - Free.');
+  base.sellers = [{ name: 'Ana', pax: '3' }];
+  base.payments = { cash: '2', card: '1' };
+  assert.deepEqual(validatePaidTourFields(base, LANGS, SLOTS, ['web', 'free']), {});
+  base.payments = { cash: '1', card: '1', other: '' };
+  assert.equal(validatePaidTourFields(base, LANGS, SLOTS, ['web', 'free']).payments, 'Payment method pax must add up to the Sold by pax.');
+});
+
+test('war: seller with pax but no name is rejected', () => {
+  var f = Object.assign({}, OK, { pax: '3', channels: { free: '3' }, sellers: [{ name: '', pax: '3' }], payments: { cash: '3' } });
+  assert.equal(validatePaidTourFields(f, LANGS, SLOTS, ['web']).sellers, 'Each seller needs a name.');
+});
+
+test('food: costs must be non-negative amounts, sumCosts adds them', () => {
+  var f = Object.assign({}, OK, { pax: '2', channels: { 'Partner 1': '2' }, costs: { 'Partner 1': '12.50', Other: '' } });
+  assert.deepEqual(validatePaidTourFields(f, LANGS, SLOTS, ['Partner 1', 'Other']), {});
+  f.costs = { 'Partner 1': '-1' };
+  assert.equal(validatePaidTourFields(f, LANGS, SLOTS, ['Partner 1', 'Other']).costs, 'Costs must be amounts in €.');
+  assert.equal(sumCosts({ a: '12.50', b: '0.1', c: '' }), 12.6);
 });

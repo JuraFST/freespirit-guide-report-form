@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts } from './formLogic.js';
 
 var state = { city: null, name: null, tour: null, language: null, paidLanguage: null };
 
@@ -204,6 +204,8 @@ function showStep_(id) {
     titleText.style.transform = 'translateX(' + offset + 'px)';
     navRow.classList.add('hidden');
     progressTrack.classList.add('hidden');
+    document.getElementById('tour-line').classList.add('hidden');
+    document.getElementById('sticky-bar').classList.add('hidden');
     updateTitleCityIcon_(false);
     return;
   }
@@ -212,6 +214,12 @@ function showStep_(id) {
   titleText.style.transition = '';
   navRow.classList.remove('hidden');
   progressTrack.classList.remove('hidden');
+  document.getElementById('sticky-bar').classList.remove('hidden');
+  var tourLine = document.getElementById('tour-line');
+  var tourMeta = CONFIG.tours.filter(function (t) { return t.code === state.tour; })[0];
+  var onDetails = id === 'step-details-free' || id === 'step-details-paid';
+  tourLine.textContent = tourMeta ? tourMeta.label : '';
+  tourLine.classList.toggle('hidden', !(onDetails && tourMeta));
   updateBackButton_();
   updateTitleCityIcon_(id !== 'step-city');
   if (id === 'step-tour') {
@@ -251,9 +259,16 @@ function collectDraftFields_() {
     paidDate: document.getElementById('paid-date-input').value,
     paidTime: document.getElementById('paid-time-select').value,
     paidPax: document.getElementById('paid-pax-input').value,
-    channels: CONFIG.salesChannels.reduce(function (acc, c) {
+    channels: currentChannels_().reduce(function (acc, c) {
       var el = document.getElementById('channel-' + c.code);
       acc[c.code] = el ? el.value : '';
+      return acc;
+    }, {}),
+    sellers: collectSellers_(),
+    payments: collectCodedInputs_(CONFIG.paymentMethods, 'payment-'),
+    costs: currentCostItems_().reduce(function (acc, item) {
+      var el = document.getElementById('cost-' + item.code);
+      acc[item.code] = el ? el.value : '';
       return acc;
     }, {}),
     noShow: document.getElementById('no-show-input').value,
@@ -326,6 +341,7 @@ function restoreDraft_() {
     if (paidLangBtn) paidLangBtn.classList.add('selected');
   }
 
+  renderTourDetailsFields_();
   var f = draft.fields || {};
   document.getElementById('pax-input').value = f.paxFree || '';
   document.getElementById('date-input').value = f.dateFree || '';
@@ -340,7 +356,25 @@ function restoreDraft_() {
     var el = document.getElementById('channel-' + code);
     if (el) el.value = f.channels[code];
   });
+  (f.sellers || []).forEach(function (seller, i) {
+    if (i === 0) {
+      var first = document.querySelector('.seller-row');
+      if (first) { first.children[0].value = seller.name; first.children[1].value = seller.pax; }
+    } else {
+      addSellerRow_(seller.name, seller.pax);
+    }
+  });
+  Object.keys(f.payments || {}).forEach(function (code) {
+    var el = document.getElementById('payment-' + code);
+    if (el) el.value = f.payments[code];
+  });
+  Object.keys(f.costs || {}).forEach(function (code) {
+    var el = document.getElementById('cost-' + code);
+    if (el) el.value = f.costs[code];
+  });
+  reopenFilledFields_();
   updateChannelTotal();
+  updateCostTotal();
 
   stepHistory = draft.stepHistory.slice();
   showStep_(savedStep);
@@ -436,6 +470,7 @@ function renderTourOptions() {
 
 function goToTourDetails() {
   state.tour = document.getElementById('tour-select').value;
+  renderTourDetailsFields_();
   goToStep(state.tour === 'free' ? 'step-details-free' : 'step-details-paid');
 }
 
@@ -541,27 +576,178 @@ function renderPaidTimeSlots() {
   });
 }
 
-function renderChannelFields() {
-  var container = document.getElementById('paid-channel-fields');
-  CONFIG.salesChannels.forEach(function (channel) {
-    var field = document.createElement('div');
-    field.className = 'field';
-    var label = document.createElement('label');
-    label.setAttribute('for', 'channel-' + channel.code);
-    label.textContent = channel.label;
-    var input = document.createElement('input');
-    input.type = 'number';
-    input.min = '0';
-    input.step = '1';
-    input.inputMode = 'numeric';
-    input.pattern = '[0-9]*';
-    input.placeholder = '0';
-    input.id = 'channel-' + channel.code;
-    input.addEventListener('input', updateChannelTotal);
-    field.appendChild(label);
-    field.appendChild(input);
-    container.appendChild(field);
+// War and food share the same pax structure (channels + Free, Sold by,
+// payment split); food adds the partner Costs on top.
+function hasSellers_() {
+  var flow = flowForTour(state.tour);
+  return flow === 'war' || flow === 'food';
+}
+
+// Channel-pax rows for the paid-style form: generic paid uses the sales
+// channels, war and food add Free. `code` is the DOM id suffix, `key` is
+// what the payload/backend sees.
+function currentChannels_() {
+  var channels = CONFIG.salesChannels.map(function (c) { return { code: c.code, key: c.code, label: c.label }; });
+  if (hasSellers_()) channels.push({ code: CONFIG.warExtraChannel.code, key: CONFIG.warExtraChannel.code, label: CONFIG.warExtraChannel.label });
+  return channels;
+}
+
+function foodPartnerNames_() {
+  return (CONFIG.foodPartners[state.city] || []).concat(['Other']);
+}
+
+function currentCostItems_() {
+  if (flowForTour(state.tour) !== 'food') return [];
+  return foodPartnerNames_().map(function (name, i) {
+    return { code: 'p' + i, key: name, label: name };
   });
+}
+
+function makeNumberField_(id, labelText, step) {
+  var field = document.createElement('div');
+  field.className = 'field';
+  var label = document.createElement('label');
+  label.setAttribute('for', id);
+  label.textContent = labelText;
+  var input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.step = step || '1';
+  input.inputMode = step ? 'decimal' : 'numeric';
+  if (!step) input.pattern = '[0-9]*';
+  input.placeholder = '0';
+  input.id = id;
+  field.appendChild(label);
+  field.appendChild(input);
+  return field;
+}
+
+// (Re)builds every tour-dependent block of the paid-style form. Called when
+// a tour is picked and on draft restore; clears first so switching tours
+// never leaves stale fields behind.
+function renderTourDetailsFields_() {
+  var flow = flowForTour(state.tour);
+  if (flow === 'free') return;
+  renderToggleGroup_('channel-buttons', 'paid-channel-fields', currentChannels_(), 'channel-',
+    function (c) { return c.label.replace(/^Pax - /, ''); }, function (c) { return c.label; });
+
+  var sellerRows = document.getElementById('seller-rows');
+  sellerRows.innerHTML = '';
+  if (hasSellers_()) addSellerRow_('', '');
+  renderToggleGroup_('payment-buttons', 'payment-fields', hasSellers_() ? CONFIG.paymentMethods : [], 'payment-',
+    function (m) { return m.label; }, function (m) { return m.label; });
+
+  syncSellerSections_();
+  document.getElementById('food-extras').classList.toggle('hidden', flow !== 'food');
+  renderToggleGroup_('cost-buttons', 'cost-fields', currentCostItems_(), 'cost-',
+    function (item) { return item.label; }, function (item) { return item.label + ' (€)'; }, '0.01');
+  updateChannelTotal();
+  updateCostTotal();
+}
+
+// A row of buttons, one per item. Tapping a button reveals that item's
+// number field (and focuses it); fields stay open once revealed. Nothing is
+// open by default.
+function renderToggleGroup_(buttonsId, fieldsId, items, idPrefix, buttonLabel, fieldLabel, step) {
+  var buttons = document.getElementById(buttonsId);
+  var fields = document.getElementById(fieldsId);
+  buttons.innerHTML = '';
+  fields.innerHTML = '';
+  items.forEach(function (item) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'toggle-' + idPrefix + item.code;
+    btn.textContent = buttonLabel(item);
+    btn.addEventListener('click', function () { openToggleField_(idPrefix, item.code, true); });
+    buttons.appendChild(btn);
+    var field = makeNumberField_(idPrefix + item.code, fieldLabel(item), step);
+    field.classList.add('field--closed');
+    // "Other" amounts have no further detail field, so point at the Note.
+    if (item.key === 'Other' || item.code === 'other') {
+      var hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.textContent = 'Add details in the Note below.';
+      field.appendChild(hint);
+    }
+    fields.appendChild(field);
+  });
+}
+
+// Sold by + Payment method only appear once the Free channel is opened,
+// since they break down Pax - Free.
+function syncSellerSections_() {
+  var freeInput = document.getElementById('channel-free');
+  var freeOpen = !!freeInput && !freeInput.parentNode.classList.contains('field--closed');
+  document.getElementById('war-extras').classList.toggle('hidden', !(hasSellers_() && freeOpen));
+}
+
+function openToggleField_(idPrefix, code, focus) {
+  var input = document.getElementById(idPrefix + code);
+  if (!input) return;
+  input.parentNode.classList.remove('field--closed');
+  document.getElementById('toggle-' + idPrefix + code).classList.add('selected');
+  if (idPrefix === 'channel-' && code === 'free') syncSellerSections_();
+  if (focus) input.focus();
+}
+
+// After a draft restore: reopen every field that has a saved value.
+function reopenFilledFields_() {
+  document.querySelectorAll('.field--closed > input').forEach(function (input) {
+    if (input.value === '') return;
+    var m = input.id.match(/^(channel-|payment-|cost-)(.+)$/);
+    if (m) openToggleField_(m[1], m[2], false);
+  });
+}
+
+function addSellerRow_(name, pax) {
+  var row = document.createElement('div');
+  row.className = 'seller-row';
+  // Sellers are guides from the same city, picked from a dropdown.
+  var nameInput = document.createElement('select');
+  var placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Seller';
+  nameInput.appendChild(placeholder);
+  (CONFIG.guidesByCity[state.city] || []).forEach(function (guide) {
+    var option = document.createElement('option');
+    option.value = guide;
+    option.textContent = guide;
+    nameInput.appendChild(option);
+  });
+  nameInput.value = name;
+  var paxInput = document.createElement('input');
+  paxInput.type = 'number';
+  paxInput.min = '0';
+  paxInput.step = '1';
+  paxInput.inputMode = 'numeric';
+  paxInput.placeholder = '0';
+  paxInput.value = pax;
+  row.appendChild(nameInput);
+  row.appendChild(paxInput);
+  document.getElementById('seller-rows').appendChild(row);
+}
+
+function collectSellers_() {
+  return Array.from(document.querySelectorAll('.seller-row')).map(function (row) {
+    return { name: row.children[0].value, pax: row.children[1].value };
+  });
+}
+
+// { key: rawValue } for a list of {code, key} items whose inputs are
+// `idPrefix + code`.
+function collectCodedInputs_(items, idPrefix) {
+  var out = {};
+  items.forEach(function (item) {
+    var el = document.getElementById(idPrefix + item.code);
+    out[item.key || item.code] = el ? el.value : '';
+  });
+  return out;
+}
+
+function updateCostTotal() {
+  var el = document.getElementById('cost-total');
+  var total = sumCosts(collectCodedInputs_(currentCostItems_(), 'cost-'));
+  el.textContent = total > 0 ? 'Total costs: ' + total.toFixed(2) + ' €' : '';
 }
 
 // Live running total so a guide sees a channel-pax/Total-Pax mismatch while
@@ -569,22 +755,30 @@ function renderChannelFields() {
 function updateChannelTotal() {
   var totalEl = document.getElementById('channel-total');
   var statedPaxRaw = document.getElementById('paid-pax-input').value;
-  var channelSum = CONFIG.salesChannels.reduce(function (sum, channel) {
-    var n = parseInt(document.getElementById('channel-' + channel.code).value, 10);
+  var channelSum = currentChannels_().reduce(function (sum, channel) {
+    var el = document.getElementById('channel-' + channel.code);
+    var n = parseInt(el ? el.value : '', 10);
     return sum + (Number.isInteger(n) ? n : 0);
   }, 0);
-
-  if (statedPaxRaw === '' && channelSum === 0) {
-    totalEl.textContent = '';
-    totalEl.classList.remove('channel-total--match');
-    return;
-  }
 
   var statedPax = parseInt(statedPaxRaw, 10);
   var hasStatedPax = Number.isInteger(statedPax);
   var matches = hasStatedPax && channelSum === statedPax;
   totalEl.textContent = (matches ? '✓ ' : '') + channelSum + (hasStatedPax ? ' / ' + statedPax : '') + ' pax entered';
   totalEl.classList.toggle('channel-total--match', matches);
+
+  // Sold by must add up to Pax - Free.
+  var freeEl = document.getElementById('channel-free');
+  var freePax = parseInt(freeEl ? freeEl.value : '', 10);
+  if (!Number.isInteger(freePax)) freePax = 0;
+  var sellerSum = collectSellers_().reduce(function (sum, seller) {
+    var n = parseInt(seller.pax, 10);
+    return sum + (Number.isInteger(n) ? n : 0);
+  }, 0);
+  var sellerMatches = freePax > 0 && sellerSum === freePax;
+  var sellerEl = document.getElementById('seller-total');
+  sellerEl.textContent = (sellerMatches ? '✓ ' : '') + sellerSum + ' / ' + freePax + ' pax entered';
+  sellerEl.classList.toggle('channel-total--match', sellerMatches);
 }
 
 // message can be a single string (server/network errors) or an array (all
@@ -612,7 +806,10 @@ var PAID_ERROR_FIELDS = {
   date: 'paid-date-input',
   time: 'paid-time-select',
   pax: 'paid-pax-input',
-  channels: 'paid-channel-fields',
+  channels: 'channel-buttons',
+  sellers: 'seller-rows',
+  payments: 'payment-buttons',
+  costs: 'cost-buttons',
 };
 
 function clearFieldErrors_(fieldMap) {
@@ -656,11 +853,12 @@ function collectFreeFields_() {
 }
 
 function collectPaidFields_() {
-  var channels = {};
-  CONFIG.salesChannels.forEach(function (channel) {
-    channels[channel.code] = document.getElementById('channel-' + channel.code).value;
-  });
+  var flow = flowForTour(state.tour);
+  var channels = collectCodedInputs_(currentChannels_(), 'channel-');
   return {
+    sellers: hasSellers_() ? collectSellers_() : undefined,
+    payments: hasSellers_() ? collectCodedInputs_(CONFIG.paymentMethods, 'payment-') : undefined,
+    costs: flow === 'food' ? collectCodedInputs_(currentCostItems_(), 'cost-') : undefined,
     language: state.paidLanguage,
     date: document.getElementById('paid-date-input').value,
     time: document.getElementById('paid-time-select').value,
@@ -701,7 +899,7 @@ function revalidateVisibleStep_() {
       paidFields,
       CONFIG.allLanguages.map(function (l) { return l.code; }),
       CONFIG.timeSlots,
-      CONFIG.salesChannels.map(function (c) { return c.code; })
+      currentChannels_().map(function (c) { return c.key; })
     );
     var paidErrorKeys = Object.keys(paidErrors);
     if (paidErrorKeys.length > 0) {
@@ -807,7 +1005,7 @@ function handlePaidSubmit() {
     fields,
     CONFIG.allLanguages.map(function (l) { return l.code; }),
     CONFIG.timeSlots,
-    CONFIG.salesChannels.map(function (c) { return c.code; })
+    currentChannels_().map(function (c) { return c.key; })
   );
   var errorKeys = Object.keys(errors);
   if (errorKeys.length > 0) {
@@ -828,6 +1026,9 @@ function handlePaidSubmit() {
     note: fields.note,
     channels: fields.channels,
     noShow: fields.noShow,
+    sellers: fields.sellers,
+    payments: fields.payments,
+    costs: fields.costs,
     photo: state.paidPhoto,
   });
 
@@ -872,12 +1073,12 @@ renderTimeSlots();
 renderTourOptions();
 renderPaidLanguageButtons();
 renderPaidTimeSlots();
-renderChannelFields();
 document.getElementById('name-continue').addEventListener('click', goToTourStep);
 document.getElementById('tour-continue').addEventListener('click', goToTourDetails);
 document.getElementById('submit-button').addEventListener('click', handleSubmit);
 document.getElementById('paid-submit-button').addEventListener('click', handlePaidSubmit);
 document.getElementById('paid-pax-input').addEventListener('input', updateChannelTotal);
+document.getElementById('add-seller-button').addEventListener('click', function () { addSellerRow_('', ''); });
 document.getElementById('back-button').addEventListener('click', goBack);
 ['date-input', 'paid-date-input'].forEach(function (id) {
   document.getElementById(id).addEventListener('click', function () {
@@ -899,6 +1100,8 @@ document.getElementById('paid-photo-input').addEventListener('change', function 
 // name/tour/language picks are saved separately, at their own click/step
 // handlers above, since those don't fire input/change on .card.
 function handleCardFieldChange_() {
+  updateChannelTotal();
+  updateCostTotal();
   revalidateVisibleStep_();
   saveDraft_();
 }

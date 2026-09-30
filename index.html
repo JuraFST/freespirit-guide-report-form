@@ -31,11 +31,14 @@
     </div>
     <h1 id="page-title"><span id="page-title-text">Tour Log</span><img id="title-city-icon" class="title-city-icon" alt=""></h1>
 
-    <div id="nav-row" class="nav-row hidden">
-      <button id="back-button" type="button" class="link-button">&larr; Back</button>
-      <span id="progress-label" class="progress-label"></span>
+    <div id="sticky-bar" class="sticky-bar">
+      <div id="nav-row" class="nav-row hidden">
+        <button id="back-button" type="button" class="link-button">&larr; Back</button>
+        <span id="progress-label" class="progress-label"></span>
+      </div>
+      <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+      <p id="tour-line" class="tour-line hidden"></p>
     </div>
-    <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
 
     <section id="step-city" class="step">
       <h2>City</h2>
@@ -107,8 +110,30 @@
         <label for="paid-pax-input">Total Pax</label>
         <input id="paid-pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
+      <div id="channel-buttons" class="button-row button-row--compact"></div>
       <div id="paid-channel-fields"></div>
       <p id="channel-total" class="channel-total"></p>
+      <div id="war-extras" class="hidden">
+        <div class="field">
+          <label>Sold by</label>
+          <div id="seller-rows"></div>
+          <p id="seller-total" class="channel-total"></p>
+          <button id="add-seller-button" type="button" class="link-button">+ Add seller</button>
+        </div>
+        <div class="field">
+          <label>Payment method</label>
+          <div id="payment-buttons" class="button-row button-row--compact"></div>
+          <div id="payment-fields"></div>
+        </div>
+      </div>
+      <div id="food-extras" class="hidden">
+        <div class="field">
+          <label>Costs</label>
+          <div id="cost-buttons" class="button-row button-row--compact"></div>
+          <div id="cost-fields"></div>
+          <p id="cost-total" class="channel-total"></p>
+        </div>
+      </div>
       <div class="field">
         <label for="no-show-input">No Show</label>
         <input id="no-show-input" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">

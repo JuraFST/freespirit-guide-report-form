@@ -115,8 +115,42 @@ h1 {
   height: 3px;
   background: var(--white-smoke);
   border-radius: 2px;
-  margin-bottom: 32px;
   overflow: hidden;
+}
+/* Nav row, progress bar and tour name stay pinned to the top while the
+   (long) step-4 form scrolls. Negative margin + padding stretch the bar to
+   the card's edges so scrolled content doesn't peek out at the sides. */
+.sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--white);
+  margin: 0 -28px 32px;
+  padding: 8px 28px 6px;
+}
+.sticky-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+  background: linear-gradient(to bottom, var(--white), transparent);
+  pointer-events: none;
+}
+.field-hint {
+  flex: 0 0 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.tour-line {
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--black);
 }
 .progress-fill {
   height: 100%;
@@ -142,6 +176,7 @@ h1 {
   margin: 0 0 12px;
 }
 .hidden { display: none; }
+.field--closed { display: none !important; }
 
 #step-result { margin-top: 8px; }
 #result-message {
@@ -257,21 +292,28 @@ h1 {
 /* Channel breakdown: compact label-left/input-right rows instead of the
    usual stacked field, since it's 5 near-identical numeric fields in a row
    — a tally list reads faster here than 5 full-height form fields. */
-#paid-channel-fields .field {
+#paid-channel-fields .field,
+#payment-fields .field,
+#cost-fields .field {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin: 12px 0;
 }
-#paid-channel-fields .field > label {
+#paid-channel-fields .field > label,
+#payment-fields .field > label,
+#cost-fields .field > label {
   margin-bottom: 0;
 }
 /* Chrome reserves layout space for the spin-button arrows even when they're
    only drawn on hover/focus — in a box this narrow that reserved gutter eats
    enough width to throw off text-align: right. Hiding the arrows removes it;
    a headcount field doesn't need them anyway. */
-#paid-channel-fields .field > input {
+#paid-channel-fields .field > input,
+#payment-fields .field > input,
+#cost-fields .field > input {
   width: 52px;
   flex: 0 0 auto;
   padding: 8px 10px;
@@ -280,10 +322,32 @@ h1 {
   appearance: textfield;
 }
 #paid-channel-fields .field > input::-webkit-outer-spin-button,
-#paid-channel-fields .field > input::-webkit-inner-spin-button {
+#paid-channel-fields .field > input::-webkit-inner-spin-button,
+#payment-fields .field > input::-webkit-outer-spin-button,
+#payment-fields .field > input::-webkit-inner-spin-button,
+#cost-fields .field > input::-webkit-outer-spin-button,
+#cost-fields .field > input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+.seller-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.seller-row select { flex: 1 1 auto; min-width: 0; }
+.seller-row input[type="number"] {
+  width: 52px;
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.seller-row input[type="number"]::-webkit-outer-spin-button,
+.seller-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#cost-fields .field > input { width: 72px; }
 .channel-total {
   margin: -4px 0 20px;
   text-align: right;
@@ -425,6 +489,9 @@ input.field-invalid, select.field-invalid {
 }
 .button-row.field-invalid,
 #paid-channel-fields.field-invalid,
+#seller-rows.field-invalid,
+#payment-fields.field-invalid,
+#cost-fields.field-invalid,
 #paid-language-buttons.field-invalid {
   outline: 2px solid #c0392b;
   outline-offset: 4px;

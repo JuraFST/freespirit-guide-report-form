@@ -46,6 +46,27 @@ export const CONFIG = {
     { code: 'musement', label: 'Pax - Musement' },
     { code: 'viator', label: 'Pax - Viator' },
   ],
+  // War adds a Free channel on top of the paid ones. Keep in sync with
+  // backend/Constants.gs's CHANNEL_MAP.
+  warExtraChannel: { code: 'free', label: 'Pax - Free' },
+  // War payment split (pax per method), written to the payment column.
+  paymentMethods: [
+    { code: 'cash', label: 'Cash' },
+    { code: 'card', label: 'Card' },
+    { code: 'other', label: 'Other' },
+  ],
+  // Food / food PR partners per city, from Jura (2026-09-30), updated yearly.
+  // 'Other' is appended in the form (details go in the note). Only this
+  // list needs editing, the backend accepts whatever partner names arrive.
+  foodPartners: {
+    zg: [
+      'La Štruk', 'K&G', 'Heritage', 'Cravaticum', 'Dr. Pigley', 'Burek',
+      'Sir i vrhnje', 'Crošara', 'Brx', 'Gradska Kavana',
+    ],
+    du: ['Pijaca', 'Uje', 'B Bar', 'Moskar', "M'arden", 'Kopun'],
+    zd: ['Pijaca', '4 kantuna', 'Malo Misto', "Bob Rock's"],
+    st: ['Uje', 'Gudin', 'Pršut', 'ST Burek', 'Amare'],
+  },
   // Keep in sync with backend/Constants.gs's TIME_SLOTS.
   timeSlots: buildHalfHourSlots(8, 20),
 };
