@@ -1,6 +1,6 @@
 export const CONFIG = {
-  clientId: '324131903836-5plbnieve6aganag80isn96qm8l1he38.apps.googleusercontent.com',
-  appsScriptExecUrl: 'https://script.google.com/macros/s/AKfycbxNHeTz0HBskYAp_GlW4MeLLwF7IVjlGLZ9r4m3e_VNf5P0M_MUf-9Xb3ZmyJqt3nXQ/exec',
+  clientId: '899808144926-uo2oh0undnbqm9v0pc5ogvhmu41tndvo.apps.googleusercontent.com',
+  appsScriptExecUrl: 'https://script.google.com/macros/s/AKfycbwd3FNd3tChQdePQPixOw_gPfxWolFyxCdQzG7Q_LKItNt7CSrGGY3-OxG6X6AnYjmf/exec',
   cities: [
     { code: 'zg', label: 'Zagreb' },
     { code: 'du', label: 'Dubrovnik' },
@@ -8,27 +8,13 @@ export const CONFIG = {
     { code: 'st', label: 'Split' },
   ],
   // Keep in sync with backend/Constants.gs's GUIDE_DIRECTORY (name+city).
+  // Public demo: only Antun Zebec, Juraj Zebec and Nika Sikaček, not the
+  // full real roster (that stays in the private freespirit repo's config.js).
   guidesByCity: {
-    zg: [
-      'Juraj Zebec', 'Antonio Sičić',
-      'Darko Crnolatac', 'Diana Bolić', 'Dora Mlinarek Dominik',
-      'Doris Cvetko Pavišić', 'Iva Pavlović', 'Ivana Čakarić',
-      'Katarina Novoselac', 'Katija Crnčević', 'Kristina Božić',
-      'Luka Pelicarić', 'Nadir Ivanović', 'Nikolina Folnović', 'Vid Dorić',
-    ],
-    du: [
-      'Andrea Rendulić', 'Emma Martinović', 'Ivo Miličić', 'Lorena Arias',
-      'Maja Musulin', 'Marin Kalauz', 'Nikolina Vidojević', 'Pero Kusalo',
-      'Romana Tomičić', 'Sara Žanetić',
-    ],
-    zd: [
-      'Andrija Grubić', 'Iva Zaplatić', 'Matea Duka', 'Nikolina Kuzman',
-      'Tonka Baričević',
-    ],
-    st: [
-      'Boris Čerina', 'Bruno Beara', 'Ivana Čagalj', 'Lorena Ćelić',
-      'Marija Močić', 'Marina Krolo', 'Petra Lučev',
-    ],
+    zg: ['Antun Zebec', 'Juraj Zebec', 'Nika Sikaček'],
+    du: [],
+    zd: [],
+    st: [],
   },
   // Keep the codes here in sync with backend/Constants.gs's
   // FREE_TOUR_LANGUAGES — see that file's comment for why.

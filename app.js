@@ -916,3 +916,11 @@ document.getElementById('not-you-button').addEventListener('click', function () 
   location.reload();
 });
 if (!restoreDraft_() && !startFromRememberedGuide_()) showStep_('step-city');
+
+// Dark mode toggle. The initial data-theme is set by the inline script in
+// index.html; this only flips it and remembers the choice on this phone.
+document.getElementById('theme-toggle').addEventListener('click', function () {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('theme', next); } catch (e) {}
+});
