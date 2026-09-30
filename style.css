@@ -138,6 +138,14 @@ h1 {
   background: linear-gradient(to bottom, var(--white), transparent);
   pointer-events: none;
 }
+/* Costs is a section of its own: bigger label, more air above it. */
+#food-extras { padding-top: 16px; }
+#food-extras > .field > label {
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.field > .field-hint { margin: 6px 0 8px; }
 .field-hint {
   flex: 0 0 100%;
   margin: 0;
@@ -552,6 +560,14 @@ input.field-invalid, select.field-invalid {
   --border-strong: #4a4a4a;
 }
 :root[data-theme="dark"] .card { box-shadow: none; }
+/* Select arrow and date icon are SVG backgrounds with a hardcoded dark fill,
+   so dark mode needs light copies. */
+:root[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23f0f0f0'/></svg>");
+}
+:root[data-theme="dark"] input[type="date"] {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f0f0f0' stroke-width='2'><rect x='3' y='5' width='18' height='16' rx='2'/><line x1='16' y1='3' x2='16' y2='7'/><line x1='8' y1='3' x2='8' y2='7'/><line x1='3' y1='10' x2='21' y2='10'/></svg>");
+}
 :root[data-theme="dark"] .logo,
 :root[data-theme="dark"] .title-city-icon,
 :root[data-theme="dark"] .city-flyer,
