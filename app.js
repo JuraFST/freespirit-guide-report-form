@@ -396,6 +396,87 @@ function readPhotoAsBase64_(file, callback) {
   reader.readAsDataURL(file);
 }
 
+// Invoices are shrunk before upload so several fit in one Apps Script POST.
+var INVOICE_MAX_FILES = 8;
+var INVOICE_MAX_SIDE = 1600;
+
+function resizeToBase64_(file, callback) {
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function () {
+    var scale = Math.min(1, INVOICE_MAX_SIDE / Math.max(img.width, img.height));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    callback({
+      data: dataUrl.slice(dataUrl.indexOf(',') + 1),
+      mimeType: 'image/jpeg',
+      filename: file.name.replace(/\.[^.]+$/, '') + '.jpg',
+    });
+  };
+  // Not decodable in the browser (e.g. HEIC): send the original untouched.
+  img.onerror = function () { URL.revokeObjectURL(url); readPhotoAsBase64_(file, callback); };
+  img.src = url;
+}
+
+// File input with thumbnails. Keeps items = [{ thumbUrl, payload }] and calls
+// onChange(items) after every add/remove. Single mode replaces the file;
+// multi mode appends up to INVOICE_MAX_FILES. Files are never saved in the draft.
+function setupUpload_(opts) {
+  var input = document.getElementById(opts.inputId);
+  var thumbs = document.getElementById(opts.thumbsId);
+  var label = document.getElementById(opts.labelId);
+  var items = [];
+
+  function render() {
+    thumbs.innerHTML = '';
+    items.forEach(function (item, index) {
+      var box = document.createElement('div');
+      box.className = 'thumb';
+      var img = document.createElement('img');
+      img.src = item.thumbUrl;
+      img.alt = item.payload.filename;
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove ' + item.payload.filename);
+      remove.addEventListener('click', function () {
+        URL.revokeObjectURL(item.thumbUrl);
+        items.splice(index, 1);
+        render();
+        opts.onChange(items);
+      });
+      box.appendChild(img);
+      box.appendChild(remove);
+      thumbs.appendChild(box);
+    });
+    label.textContent = items.length === 0 ? 'No file chosen'
+      : opts.multi ? items.length + '/' + INVOICE_MAX_FILES + ' chosen' : items[0].payload.filename;
+  }
+
+  input.addEventListener('change', function () {
+    var files = Array.prototype.slice.call(input.files);
+    input.value = '';
+    if (!opts.multi) {
+      items.forEach(function (item) { URL.revokeObjectURL(item.thumbUrl); });
+      items = [];
+      files = files.slice(0, 1);
+    }
+    files = files.slice(0, INVOICE_MAX_FILES - items.length);
+    var pending = files.length;
+    if (pending === 0) { render(); opts.onChange(items); return; }
+    files.forEach(function (file) {
+      (opts.resize ? resizeToBase64_ : readPhotoAsBase64_)(file, function (payload) {
+        items.push({ thumbUrl: URL.createObjectURL(file), payload: payload });
+        if (--pending === 0) { render(); opts.onChange(items); }
+      });
+    });
+  });
+}
+
 function renderCityButtons() {
   var container = document.getElementById('city-buttons');
   preloadCityIcons_();
@@ -639,6 +720,7 @@ function renderTourDetailsFields_() {
 
   syncSellerSections_();
   document.getElementById('food-extras').classList.toggle('hidden', flow !== 'food');
+  document.getElementById('invoice-field').classList.toggle('hidden', flow !== 'food');
   renderToggleGroup_('cost-buttons', 'cost-fields', currentCostItems_(), 'cost-',
     function (item) { return item.label; }, function (item) { return item.label + ' (€)'; }, '0.01');
   updateChannelTotal();
@@ -1030,6 +1112,7 @@ function handlePaidSubmit() {
     payments: fields.payments,
     costs: fields.costs,
     photo: state.paidPhoto,
+    invoices: state.invoices,
   });
 
   var submitButton = document.getElementById('paid-submit-button');
@@ -1085,16 +1168,14 @@ document.getElementById('back-button').addEventListener('click', goBack);
     if (this.showPicker) { try { this.showPicker(); } catch (e) {} }
   });
 });
-document.getElementById('photo-input').addEventListener('change', function (e) {
-  var file = e.target.files[0];
-  document.getElementById('photo-filename').textContent = file ? file.name : 'No file chosen';
-  readPhotoAsBase64_(file, function (photo) { state.photo = photo; });
-});
-document.getElementById('paid-photo-input').addEventListener('change', function (e) {
-  var file = e.target.files[0];
-  document.getElementById('paid-photo-filename').textContent = file ? file.name : 'No file chosen';
-  readPhotoAsBase64_(file, function (photo) { state.paidPhoto = photo; });
-});
+setupUpload_({ inputId: 'photo-input', thumbsId: 'photo-thumbs', labelId: 'photo-filename',
+  multi: false, onChange: function (items) { state.photo = items[0] ? items[0].payload : null; } });
+setupUpload_({ inputId: 'paid-photo-input', thumbsId: 'paid-photo-thumbs', labelId: 'paid-photo-filename',
+  multi: false, onChange: function (items) { state.paidPhoto = items[0] ? items[0].payload : null; } });
+setupUpload_({ inputId: 'invoice-input', thumbsId: 'invoice-thumbs', labelId: 'invoice-count',
+  multi: true, resize: true, onChange: function (items) {
+    state.invoices = items.map(function (item) { return item.payload; });
+  } });
 // Covers every typed/selected field on step 4 (pax, date, note, channel pax,
 // etc.) with one listener instead of wiring each field individually — city/
 // name/tour/language picks are saved separately, at their own click/step

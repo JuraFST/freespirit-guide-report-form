@@ -83,6 +83,7 @@
           <span id="photo-filename" class="file-name">No file chosen</span>
           <input id="photo-input" type="file" accept="image/*" class="visually-hidden">
         </div>
+        <div id="photo-thumbs" class="thumbs"></div>
       </div>
       <div class="field">
         <label for="note-input">Note (optional)</label>
@@ -147,6 +148,16 @@
           <span id="paid-photo-filename" class="file-name">No file chosen</span>
           <input id="paid-photo-input" type="file" accept="image/*" class="visually-hidden">
         </div>
+        <div id="paid-photo-thumbs" class="thumbs"></div>
+      </div>
+      <div id="invoice-field" class="field hidden">
+        <label for="invoice-input">Invoice upload (optional)</label>
+        <div class="file-input">
+          <label for="invoice-input" class="file-button">Choose invoices</label>
+          <span id="invoice-count" class="file-name">No file chosen</span>
+          <input id="invoice-input" type="file" accept="image/*" multiple class="visually-hidden">
+        </div>
+        <div id="invoice-thumbs" class="thumbs"></div>
       </div>
       <div class="field">
         <label for="paid-note-input">Note (optional)</label>

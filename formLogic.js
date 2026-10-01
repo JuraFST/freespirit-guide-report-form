@@ -115,6 +115,9 @@ export function buildSubmissionPayload(fields) {
     if (fields.sellers) payload.sellers = fields.sellers;
     if (fields.payments) payload.payments = fields.payments;
     if (fields.costs) payload.costs = fields.costs;
+    if (flowForTour(fields.tour) === 'food' && fields.invoices && fields.invoices.length) {
+      payload.invoices = fields.invoices;
+    }
   }
   return payload;
 }

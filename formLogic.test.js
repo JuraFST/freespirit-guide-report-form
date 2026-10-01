@@ -151,3 +151,11 @@ test('food: costs must be non-negative amounts, sumCosts adds them', () => {
   assert.equal(validatePaidTourFields(f, LANGS, SLOTS, ['Partner 1', 'Other']).costs, 'Costs must be amounts in €.');
   assert.equal(sumCosts({ a: '12.50', b: '0.1', c: '' }), 12.6);
 });
+
+test('buildSubmissionPayload includes invoices only for food flows', () => {
+  var base = { city: 'zg', name: 'Test Guide', language: 'eng', pax: '2', date: '2026-09-20', time: '10:00', channels: { web: '2' }, invoices: [{ data: 'AAAA' }] };
+  assert.deepEqual(buildSubmissionPayload({ ...base, tour: 'food' }).invoices, [{ data: 'AAAA' }]);
+  assert.deepEqual(buildSubmissionPayload({ ...base, tour: 'food PR' }).invoices, [{ data: 'AAAA' }]);
+  assert.equal('invoices' in buildSubmissionPayload({ ...base, tour: 'war' }), false);
+  assert.equal('invoices' in buildSubmissionPayload({ ...base, tour: 'food', invoices: [] }), false);
+});
