@@ -334,10 +334,11 @@ p.field-hint--instruction {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 20px;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  margin: -12px 0 8px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--black);
 }
 .who-link {
   background: none;
@@ -357,24 +358,31 @@ p.field-hint--instruction {
 .tab-bar {
   display: flex;
   gap: 8px;
-  margin: 0 0 24px;
+  margin: 0 0 20px;
 }
 .tab {
-  flex: 1;
-  min-height: 52px;
-  padding: 8px 14px;
-  border: 1px solid var(--black);
+  flex: none;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 6px 20px;
+  border: 1px solid var(--muted);
   border-radius: 4px;
   background: var(--white);
   color: var(--black);
   font-family: 'Montserrat', sans-serif;
-  font-weight: 600;
-  font-size: 18px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
   cursor: pointer;
 }
-.tab.selected { background: var(--black); color: var(--white); }
+/* Selected is a heavier black outline with bold text, never a solid fill like
+   the action buttons (Continue, Submit). The extra width is taken from the
+   padding so the tabs do not shift when selected. */
+.tab.selected {
+  border: 2px solid var(--black);
+  padding: 5px 19px;
+  font-weight: 700;
+}
 
 @keyframes panel-in { from { opacity: 0; } to { opacity: 1; } }
 .panel-in { animation: panel-in 0.15s ease-out; }
@@ -383,7 +391,29 @@ p.field-hint--instruction {
   .panel-in { animation: none; }
 }
 
-.button-row--tight { margin-bottom: 16px; }
+.button-row--tight { margin: 0 0 8px; align-items: center; gap: 16px; }
+/* 7 / 30 day filter: plain text toggle, not boxes, so the Log / My Sales tabs
+   stay the only buttons on the screen. Selected is dark, bold and underlined. */
+.sales-window-label { font-size: 14px; color: var(--muted); }
+.button-row--tight button {
+  min-height: 40px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.button-row--tight button.selected {
+  background: none;
+  color: var(--black);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
 .sales-total {
   margin: 0 0 12px;
   font-weight: 600;
@@ -690,7 +720,6 @@ input.field-invalid, select.field-invalid {
   input, select { font-size: 16px; }
   .file-name, .error { font-size: 15px; }
   .today-date,
-  .who-line,
   .link-button,
   .step h2,
   .button-row button, #city-buttons button,
