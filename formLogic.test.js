@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, formatSaleDate } from './formLogic.js';
 
 test('validateFreeTourFields rejects unknown language', () => {
   var errors = validateFreeTourFields(
@@ -98,7 +98,15 @@ test('validatePaidTourFields rejects when channel pax does not sum to stated pax
     { language: 'eng', date: '2026-09-20', time: '10:00', pax: '10', channels: { web: '4', viator: '5' } },
     ['eng'], ['10:00'], ['web', 'viator']
   );
-  assert.equal(errors.channels, 'Channel pax must add up to the total Pax.');
+  assert.equal(errors.channels, 'Channels add up to 9, Total Pax is 10. Add 1 more or change Total Pax.');
+});
+
+test('validatePaidTourFields says how many to remove when channels exceed stated pax', () => {
+  var errors = validatePaidTourFields(
+    { language: 'eng', date: '2026-09-20', time: '10:00', pax: '10', channels: { web: '7', viator: '5' } },
+    ['eng'], ['10:00'], ['web', 'viator']
+  );
+  assert.equal(errors.channels, 'Channels add up to 12, Total Pax is 10. Remove 2 or change Total Pax.');
 });
 
 test('validatePaidTourFields accepts a fully valid set with no errors', () => {
@@ -158,4 +166,20 @@ test('buildSubmissionPayload includes invoices only for food flows', () => {
   assert.deepEqual(buildSubmissionPayload({ ...base, tour: 'food PR' }).invoices, [{ data: 'AAAA' }]);
   assert.equal('invoices' in buildSubmissionPayload({ ...base, tour: 'war' }), false);
   assert.equal('invoices' in buildSubmissionPayload({ ...base, tour: 'food', invoices: [] }), false);
+});
+
+test('buildMySalesRequest builds the mySales payload', () => {
+  assert.deepEqual(
+    buildMySalesRequest('zg', 'Juraj Zebec', 7),
+    { action: 'mySales', city: 'zg', name: 'Juraj Zebec', windowDays: 7 }
+  );
+});
+
+test('formatSaleDate turns an ISO date into dd.mm.yyyy.', () => {
+  assert.equal(formatSaleDate('2026-10-04'), '04.10.2026.');
+});
+
+test('formatSaleDate leaves a non-ISO value unchanged', () => {
+  assert.equal(formatSaleDate('04/10/26'), '04/10/26');
+  assert.equal(formatSaleDate(''), '');
 });

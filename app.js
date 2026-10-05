@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, formatSaleDate } from './formLogic.js';
 
 var state = { city: null, name: null, tour: null, language: null, paidLanguage: null };
 
@@ -34,6 +34,7 @@ function updateBackButton_() {
     btn.style.opacity = '0';
     void btn.offsetWidth; // force reflow so the left start position applies before animating in
     btn.style.transition = '';
+    btn.style.visibility = 'visible';
     // Held for a beat before sliding in, so it doesn't compete with the
     // step's own fade-in for attention.
     backButtonRevealTimer = setTimeout(function () {
@@ -45,6 +46,8 @@ function updateBackButton_() {
     btn.style.pointerEvents = 'none';
     btn.style.transform = 'translateX(-14px)';
     btn.style.opacity = '0';
+    // After the slide-out finishes, drop it from the tab order.
+    backButtonRevealTimer = setTimeout(function () { btn.style.visibility = 'hidden'; }, 250);
   }
 }
 
@@ -58,7 +61,7 @@ var CITY_ICONS = {
 // Shows the chosen city's landmark icon on the "Tour Log" title row, once a
 // city has been picked. Hidden back on step-city itself (in case a
 // different city gets picked) and on step-result, where the title becomes
-// "Upisano! :)". Mirrors updateBackButton_'s slide, but from/to the right,
+// "Logged! :)". Mirrors updateBackButton_'s slide, but from/to the right,
 // since the icon sits on the opposite side of the header — and likewise
 // only animates at the true show/hide boundary, not on every step.
 function updateTitleCityIcon_(show) {
@@ -194,13 +197,10 @@ function showStep_(id) {
   var navRow = document.getElementById('nav-row');
   var progressTrack = document.querySelector('.progress-track');
   if (id === 'step-result') {
-    titleText.textContent = 'Upisano! :)';
+    titleText.textContent = 'Logged! :)';
+    // Centered at once, no slide: a guide just wants the confirmation.
     resetTitlePosition_(titleText);
-    // Read layout back before setting the target transform, or the browser
-    // would just apply the end state instantly instead of transitioning
-    // from the reset (left-aligned) position.
     var offset = title.clientWidth / 2 - titleText.offsetWidth / 2;
-    titleText.style.transition = '';
     titleText.style.transform = 'translateX(' + offset + 'px)';
     navRow.classList.add('hidden');
     progressTrack.classList.add('hidden');
@@ -225,11 +225,45 @@ function showStep_(id) {
   if (id === 'step-tour') {
     var cityLabel = CONFIG.cities.filter(function (c) { return c.code === state.city; })[0];
     document.getElementById('who-line-text').textContent = state.name + ' · ' + (cityLabel ? cityLabel.label : state.city);
+    setTourTab_('log');
   }
-  var stepNumber = STEP_NUMBERS[id] || 1;
-  document.getElementById('progress-label').textContent = 'Step ' + stepNumber + ' of ' + TOTAL_STEPS;
-  document.getElementById('progress-fill').style.width = (stepNumber / TOTAL_STEPS * 100) + '%';
+  currentStepNumber_ = STEP_NUMBERS[id] || 1;
+  document.getElementById('progress-label').textContent = 'Step ' + currentStepNumber_ + ' of ' + TOTAL_STEPS;
+  updateProgress_();
   saveDraft_();
+}
+
+// Step 4 is one long scroll, so the bar must not read "done" on arrival: it
+// starts at 3/4 and fills the last quarter as the required fields become
+// valid (the same checks Submit runs). Other steps are a plain step/total.
+var currentStepNumber_ = 1;
+function stepFourProgress_() {
+  var errors, base;
+  if (!document.getElementById('step-details-free').classList.contains('hidden')) {
+    errors = validateFreeTourFields(collectFreeFields_(),
+      CONFIG.languages.map(function (l) { return l.code; }), CONFIG.timeSlots);
+    base = ['language', 'date', 'time', 'pax'];
+  } else if (!document.getElementById('step-details-paid').classList.contains('hidden')) {
+    errors = validatePaidTourFields(collectPaidFields_(),
+      CONFIG.allLanguages.map(function (l) { return l.code; }), CONFIG.timeSlots,
+      currentChannels_().map(function (c) { return c.key; }));
+    base = ['language', 'date', 'time', 'pax', 'channels'];
+  } else {
+    return null;
+  }
+  // War/food extras (sellers, payments, costs) only count while they fail.
+  var extras = ['sellers', 'payments', 'costs'].filter(function (k) { return errors[k]; });
+  var failing = base.filter(function (k) { return errors[k]; }).length + extras.length;
+  var total = base.length + extras.length;
+  return (total - failing) / total;
+}
+
+function updateProgress_() {
+  var fraction = stepFourProgress_();
+  var done = currentStepNumber_ - 1 + (fraction === null ? 1 : fraction);
+  var pct = done / TOTAL_STEPS * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.querySelector('.progress-track').setAttribute('aria-valuenow', Math.round(pct));
 }
 
 function goToStep(id) {
@@ -241,6 +275,98 @@ function goBack() {
   if (stepHistory.length <= 1) return;
   stepHistory.pop();
   showStep_(stepHistory[stepHistory.length - 1]);
+}
+
+// ---- My Sales tab (step 3 only) ----
+var salesWindowDays = 7;
+var salesRequestId = 0;
+
+function setTourTab_(tab, animate) {
+  var onSales = tab === 'sales';
+  document.getElementById('tab-log').classList.toggle('selected', !onSales);
+  document.getElementById('tab-log').setAttribute('aria-selected', String(!onSales));
+  document.getElementById('tab-sales').classList.toggle('selected', onSales);
+  document.getElementById('tab-sales').setAttribute('aria-selected', String(onSales));
+  var logPanel = document.getElementById('log-panel');
+  var salesPanel = document.getElementById('sales-panel');
+  logPanel.classList.toggle('hidden', onSales);
+  salesPanel.classList.toggle('hidden', !onSales);
+  if (animate) {
+    var shown = onSales ? salesPanel : logPanel;
+    shown.classList.remove('panel-in');
+    void shown.offsetWidth; // restart the fade if the tab is tapped twice quickly
+    shown.classList.add('panel-in');
+  }
+  // The step bar and Back button belong to the report flow, not to My Sales.
+  var bar = document.getElementById('sticky-bar');
+  bar.classList.toggle('sticky-bar--collapsed', onSales);
+  bar.inert = onSales; // Back keeps an inline visibility, so inert is what stops keyboard focus
+  if (onSales) loadSales_();
+}
+
+function setSalesWindow_(days) {
+  salesWindowDays = days;
+  document.getElementById('sales-window-7').classList.toggle('selected', days === 7);
+  document.getElementById('sales-window-30').classList.toggle('selected', days === 30);
+  loadSales_();
+}
+
+function tourLabel_(code) {
+  var t = CONFIG.tours.filter(function (x) { return x.code === code; })[0];
+  return t ? t.label : code;
+}
+
+function loadSales_() {
+  var requestId = ++salesRequestId;
+  var message = document.getElementById('sales-message');
+  document.getElementById('sales-total').textContent = '';
+  document.getElementById('sales-list').innerHTML = '';
+  message.textContent = 'Loading...';
+
+  // Plain string body, no custom headers: same CORS rule as the submit calls.
+  fetch(CONFIG.appsScriptExecUrl, {
+    method: 'POST',
+    body: JSON.stringify(buildMySalesRequest(state.city, state.name, salesWindowDays)),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (result) {
+      if (requestId !== salesRequestId) return; // a newer request replaced this one
+      if (!result.ok) { message.textContent = result.error || 'Could not load your sales.'; return; }
+      renderSales_(result);
+    })
+    .catch(function (err) {
+      if (requestId !== salesRequestId) return;
+      console.error(err);
+      message.textContent = 'Could not load your sales. Try again.';
+    });
+}
+
+function renderSales_(result) {
+  var message = document.getElementById('sales-message');
+  var list = document.getElementById('sales-list');
+  list.innerHTML = '';
+  if (!result.sales.length) {
+    message.textContent = 'No sales in the last ' + result.windowDays + ' days.';
+    document.getElementById('sales-total').textContent = '';
+    return;
+  }
+  message.textContent = '';
+  document.getElementById('sales-total').textContent = result.totalPax + ' pax in the last ' + result.windowDays + ' days';
+  result.sales.forEach(function (sale) {
+    var li = document.createElement('li');
+    var left = document.createElement('span');
+    left.textContent = formatSaleDate(sale.date) + ' ' + tourLabel_(sale.tour);
+    var meta = document.createElement('span');
+    meta.className = 'sale-meta';
+    meta.textContent = ' led by ' + sale.leader;
+    left.appendChild(meta);
+    var pax = document.createElement('span');
+    pax.className = 'sale-pax';
+    pax.textContent = sale.pax + ' pax';
+    li.appendChild(left);
+    li.appendChild(pax);
+    list.appendChild(li);
+  });
 }
 
 var DRAFT_KEY = 'freespirit-tour-log-draft';
@@ -846,8 +972,13 @@ function updateChannelTotal() {
   var statedPax = parseInt(statedPaxRaw, 10);
   var hasStatedPax = Number.isInteger(statedPax);
   var matches = hasStatedPax && channelSum === statedPax;
-  totalEl.textContent = (matches ? '✓ ' : '') + channelSum + (hasStatedPax ? ' / ' + statedPax : '') + ' pax entered';
+  var diff = hasStatedPax ? channelSum - statedPax : 0;
+  // Words as well as color: 2 left (amber), 2 too many (red), match (green).
+  totalEl.textContent = (matches ? '✓ ' : '') + channelSum + (hasStatedPax ? ' / ' + statedPax : '') + ' pax entered' +
+    (diff < 0 ? ' · ' + (-diff) + ' left' : diff > 0 ? ' · ' + diff + ' too many' : '');
   totalEl.classList.toggle('channel-total--match', matches);
+  totalEl.classList.toggle('channel-total--under', diff < 0);
+  totalEl.classList.toggle('channel-total--over', diff > 0);
 
   // Sold by must add up to Pax - Free.
   var freeEl = document.getElementById('channel-free');
@@ -958,6 +1089,7 @@ function collectPaidFields_() {
 // already attempted) — it never surfaces errors on a first pass through
 // untouched fields.
 function revalidateVisibleStep_() {
+  updateProgress_(); // every field pick and edit lands here, so the bar follows the data
   if (!document.getElementById('step-details-free').classList.contains('hidden')) {
     if (document.getElementById('details-error').classList.contains('hidden')) return;
     var fields = collectFreeFields_();
@@ -1013,12 +1145,45 @@ function formatIsoDate_(isoDate) {
 
 // pax/date: trusted, already validated by validateFreeTourFields/
 // validatePaidTourFields before this is called.
-function buildResultMessage_(pax, date) {
+// "Web 4 · Airbnb 3" for the non-zero channels of a paid tour, so the guide can
+// spot-check what they entered. Labels come from CONFIG, never typed input.
+function channelSplit_(channels) {
+  if (!channels) return '';
+  var parts = currentChannels_().filter(function (c) {
+    return parseInt(channels[c.key], 10) > 0;
+  }).map(function (c) {
+    return c.label.replace(/^Pax - /, '') + ' <strong>' + parseInt(channels[c.key], 10) + '</strong>';
+  });
+  return parts.length ? '<span class="result-detail">' + parts.join(' &middot; ') + '</span>' : '';
+}
+
+function buildResultMessage_(pax, date, channels) {
   var tour = CONFIG.tours.filter(function (t) { return t.code === state.tour; })[0];
   var tourLabel = tour ? tour.label : state.tour;
+  var city = CONFIG.cities.filter(function (c) { return c.code === state.city; })[0];
   return 'Thanks, <strong>' + firstName_(state.name) + '</strong>! Your tour was logged. Nice work.' +
-    '<span class="result-detail"><strong>' + tourLabel + '</strong> tour &middot; <strong>' + pax +
-    '</strong> pax &middot; <strong>' + formatIsoDate_(date) + '</strong></span>';
+    '<span class="result-detail"><strong>' + tourLabel + '</strong> tour &middot; <strong>' + (city ? city.label : state.city) +
+    '</strong> &middot; <strong>' + pax + '</strong> pax &middot; <strong>' + formatIsoDate_(date) + '</strong></span>' +
+    channelSplit_(channels) +
+    '<span class="result-detail">A confirmation email is on its way.</span>';
+}
+
+// Busy state for a Submit button: a spinner in the (still dark) button, and a
+// "do not tap again" note if the response takes more than a few seconds. The
+// note is the element right after the button.
+var slowSubmitTimers_ = {};
+function setSubmitting_(button, on) {
+  var note = button.nextElementSibling;
+  clearTimeout(slowSubmitTimers_[button.id]);
+  button.disabled = on;
+  button.classList.toggle('is-submitting', on);
+  if (on) {
+    button.innerHTML = '<span class="spinner" aria-hidden="true"></span>Submitting…';
+    slowSubmitTimers_[button.id] = setTimeout(function () { note.classList.remove('hidden'); }, 4000);
+  } else {
+    button.textContent = 'Submit';
+    note.classList.add('hidden');
+  }
 }
 
 function handleSubmit() {
@@ -1050,8 +1215,7 @@ function handleSubmit() {
   });
 
   var submitButton = document.getElementById('submit-button');
-  submitButton.disabled = true;
-  submitButton.textContent = 'Submitting…';
+  setSubmitting_(submitButton, true);
 
   // No custom headers here on purpose — setting Content-Type: application/json
   // triggers a CORS preflight (OPTIONS) that an Apps Script Web App doesn't
@@ -1067,16 +1231,14 @@ function handleSubmit() {
         clearDraft_();
         showResult(buildResultMessage_(fields.pax, fields.date));
       } else {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit';
+        setSubmitting_(submitButton, false);
         showError('details-error', result.error || 'Submission failed, try again.');
       }
     })
     .catch(function (err) {
-      submitButton.disabled = false;
-      submitButton.textContent = 'Submit';
+      setSubmitting_(submitButton, false);
       console.error(err);
-      showError('details-error', 'Couldn’t confirm your submission went through. Check your email for a confirmation before submitting again.');
+      showError('details-error', 'We could not confirm your report went through. Do not send it again yet. If a confirmation email has arrived, it was received. If not, wait a minute, then submit again.');
     });
 }
 
@@ -1116,8 +1278,7 @@ function handlePaidSubmit() {
   });
 
   var submitButton = document.getElementById('paid-submit-button');
-  submitButton.disabled = true;
-  submitButton.textContent = 'Submitting…';
+  setSubmitting_(submitButton, true);
 
   fetch(CONFIG.appsScriptExecUrl, {
     method: 'POST',
@@ -1127,18 +1288,16 @@ function handlePaidSubmit() {
     .then(function (result) {
       if (result.ok) {
         clearDraft_();
-        showResult(buildResultMessage_(fields.pax, fields.date));
+        showResult(buildResultMessage_(fields.pax, fields.date, fields.channels));
       } else {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit';
+        setSubmitting_(submitButton, false);
         showError('paid-details-error', result.error || 'Submission failed, try again.');
       }
     })
     .catch(function (err) {
-      submitButton.disabled = false;
-      submitButton.textContent = 'Submit';
+      setSubmitting_(submitButton, false);
       console.error(err);
-      showError('paid-details-error', 'Couldn’t confirm your submission went through. Check your email for a confirmation before submitting again.');
+      showError('paid-details-error', 'We could not confirm your report went through. Do not send it again yet. If a confirmation email has arrived, it was received. If not, wait a minute, then submit again.');
     });
 }
 
@@ -1158,6 +1317,10 @@ renderPaidLanguageButtons();
 renderPaidTimeSlots();
 document.getElementById('name-continue').addEventListener('click', goToTourStep);
 document.getElementById('tour-continue').addEventListener('click', goToTourDetails);
+document.getElementById('tab-log').addEventListener('click', function () { setTourTab_('log', true); });
+document.getElementById('tab-sales').addEventListener('click', function () { setTourTab_('sales', true); });
+document.getElementById('sales-window-7').addEventListener('click', function () { setSalesWindow_(7); });
+document.getElementById('sales-window-30').addEventListener('click', function () { setSalesWindow_(30); });
 document.getElementById('submit-button').addEventListener('click', handleSubmit);
 document.getElementById('paid-submit-button').addEventListener('click', handlePaidSubmit);
 document.getElementById('paid-pax-input').addEventListener('input', updateChannelTotal);
@@ -1199,6 +1362,27 @@ document.getElementById('not-you-button').addEventListener('click', function () 
   clearDraft_(); // otherwise the reload would restore this guide's draft
   location.reload();
 });
+// Toggle buttons only show their state through the .selected class, so mirror
+// it into aria-pressed for screen readers in one place instead of at every
+// site that adds or removes the class (picks, draft restore, new nodes).
+function syncAriaPressed_(btn) {
+  btn.setAttribute('aria-pressed', btn.classList.contains('selected') ? 'true' : 'false');
+}
+var TOGGLE_BUTTONS = '.button-row:not(#city-buttons) button';
+document.querySelectorAll(TOGGLE_BUTTONS).forEach(syncAriaPressed_);
+new MutationObserver(function (records) {
+  records.forEach(function (r) {
+    if (r.type === 'attributes') {
+      if (r.target.matches(TOGGLE_BUTTONS)) syncAriaPressed_(r.target);
+      return;
+    }
+    r.addedNodes.forEach(function (n) {
+      if (n.nodeType !== 1) return;
+      if (n.matches(TOGGLE_BUTTONS)) syncAriaPressed_(n);
+      n.querySelectorAll(TOGGLE_BUTTONS).forEach(syncAriaPressed_);
+    });
+  });
+}).observe(document.querySelector('.card'), { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
 if (!restoreDraft_() && !startFromRememberedGuide_()) showStep_('step-city');
 
 // Dark mode toggle. The initial data-theme is set by the inline script in

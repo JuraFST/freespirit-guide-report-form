@@ -2,9 +2,14 @@
   --black: #1a1a1a;
   --white: #ffffff;
   --white-smoke: #f5f5f5;
-  --muted: #9e9e9e;
+  --muted: #6b6b6b;
   --border: #ddd;
-  --border-strong: #ccc;
+  --border-strong: #8a8a8a;
+  --danger: #b3261e;
+  --danger-bg: #fdecea;
+  --success: #1e7a46;
+  --warn: #8a5a00;
+  --accent: #3a8fd4; /* sky blue (3.5:1 on white): progress bar and keyboard focus */
 }
 * { box-sizing: border-box; }
 body {
@@ -100,6 +105,7 @@ h1 {
    to the first step, retracing the same left-side path it slid in from
    (see updateBackButton_ in app.js). */
 #back-button {
+  visibility: hidden; /* out of the tab order while hidden; app.js flips it */
   opacity: 0;
   transform: translateX(-14px);
   pointer-events: none;
@@ -112,9 +118,9 @@ h1 {
   color: var(--muted);
 }
 .progress-track {
-  height: 3px;
-  background: var(--white-smoke);
-  border-radius: 2px;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
   overflow: hidden;
 }
 /* Nav row, progress bar and tour name stay pinned to the top while the
@@ -127,6 +133,21 @@ h1 {
   background: var(--white);
   margin: 0 -28px 32px;
   padding: 8px 28px 6px;
+  /* Collapsing (My Sales tab) animates the row height 1fr -> 0fr, so the
+     content below glides up instead of jumping. */
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out, opacity 0.3s ease-out, visibility 0s linear 0s;
+}
+.sticky-bar-inner { overflow: hidden; min-height: 0; }
+.sticky-bar--collapsed {
+  grid-template-rows: 0fr;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 16px;
+  opacity: 0;
+  visibility: hidden; /* after the collapse, so Back can't be tabbed to */
+  transition: grid-template-rows 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out, opacity 0.3s ease-out, visibility 0s linear 0.3s;
 }
 .sticky-bar::after {
   content: '';
@@ -146,6 +167,29 @@ h1 {
   text-transform: uppercase;
 }
 .field > .field-hint { margin: 6px 0 8px; }
+/* The one instruction for the channel breakdown, so it reads as an
+   instruction, not a footnote. */
+p.field-hint--instruction {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--black);
+}
+/* Splits the long paid step into chunks: a rule above, then a plain heading. */
+.section-title {
+  margin: 36px 0 4px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--black);
+}
+#war-extras, #food-extras {
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+}
+#war-extras { padding-top: 4px; }
 .field-hint {
   flex: 0 0 100%;
   margin: 0;
@@ -162,7 +206,7 @@ h1 {
 }
 .progress-fill {
   height: 100%;
-  background: var(--black);
+  background: var(--accent);
   width: 0%;
   transition: width 0.2s ease;
 }
@@ -187,6 +231,14 @@ h1 {
 .field--closed { display: none !important; }
 
 #step-result { margin-top: 8px; }
+#result-message::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 12px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e7a46' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M7.5 12.5l3 3 6-6.5'/></svg>") no-repeat center / contain;
+}
 #result-message {
   font-size: 16px;
   line-height: 1.6;
@@ -228,13 +280,18 @@ h1 {
    smaller and muted, since those two cover the overwhelming majority of
    tours and shouldn't compete visually with the rare picks below them. */
 .button-row--compact button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 4px;
   font-size: 11px;
   border-color: var(--muted);
   color: var(--muted);
 }
 .button-row--compact button.selected { border-color: var(--black); }
+/* Channel, payment and cost toggles are the main data entry of the paid step,
+   so they get the normal dark outline and text, not the muted look that suits
+   the rare languages (muted reads as disabled). */
+.button-row--toggle button { border-color: var(--black); color: var(--black); }
+.button-row--toggle button.selected { color: var(--white); }
 
 /* Per-city landmark watermark (Flaticon "Croatia" pack, free tier — see
    README for required attribution). Low-opacity ::before so it sits behind
@@ -295,6 +352,56 @@ h1 {
   flex: none;
   cursor: pointer;
 }
+
+/* Tour step: Log / My Sales tabs. */
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 24px;
+}
+.tab {
+  flex: 1;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: 1px solid var(--black);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--black);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tab.selected { background: var(--black); color: var(--white); }
+
+@keyframes panel-in { from { opacity: 0; } to { opacity: 1; } }
+.panel-in { animation: panel-in 0.15s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .sticky-bar, .sticky-bar--collapsed { transition: none; }
+  .panel-in { animation: none; }
+}
+
+.button-row--tight { margin-bottom: 16px; }
+.sales-total {
+  margin: 0 0 12px;
+  font-weight: 600;
+  font-size: 16px;
+}
+.sales-list { list-style: none; margin: 0 0 16px; padding: 0; }
+.sales-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.sales-list .sale-meta { color: var(--muted); }
+.sales-list .sale-pax { font-weight: 600; white-space: nowrap; }
+.sales-message { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.sales-note { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: 0.05em; }
 
 .field { margin: 20px 0; }
 /* Channel breakdown: compact label-left/input-right rows instead of the
@@ -362,9 +469,11 @@ h1 {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--muted);
+  color: var(--black);
 }
-.channel-total--match { color: var(--black); }
+.channel-total--match { color: var(--success); }
+.channel-total--under { color: var(--warn); }
+.channel-total--over { color: var(--danger); }
 .field > label {
   display: block;
   margin-bottom: 4px;
@@ -447,6 +556,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 .file-button:hover { background: var(--white-smoke); }
+/* The real input is visually hidden, so show its keyboard focus on the label. */
+.file-input:has(input:focus-visible) .file-button { outline: 2px solid var(--accent); outline-offset: 2px; }
 .file-name {
   font-size: 13px;
   color: var(--muted);
@@ -475,6 +586,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   line-height: 1;
   cursor: pointer;
 }
+/* Invisible padding keeps the 28px remove icon but gives a 44px tap target. */
+.thumb button::after { content: ''; position: absolute; inset: -8px; }
 
 #submit-button, #paid-submit-button, #name-continue, #tour-continue, #log-another-button {
   min-height: 44px;
@@ -499,15 +612,37 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: not-allowed;
 }
 
+/* Busy Submit: stays dark with a spinner so it looks busy, not broken. */
+#submit-button.is-submitting:disabled, #paid-submit-button.is-submitting:disabled {
+  background: var(--black);
+  color: var(--white);
+  border: none;
+}
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.submit-note { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+
 /* Brand-consistent keyboard focus instead of the browser's default blue ring */
-button:focus, input:focus, select:focus { outline: none; }
-:focus-visible { outline: 2px solid var(--black); outline-offset: 2px; }
+button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:not(:focus-visible) { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .error {
   color: var(--black);
-  background: var(--white-smoke);
-  border-left: 3px solid var(--black);
-  padding: 10px 12px;
+  background: var(--danger-bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3261e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 7v6'/><path d='M12 16.5v.01'/></svg>") no-repeat 12px 12px / 20px 20px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 10px 12px 10px 42px;
   font-size: 13px;
   margin: 16px 0;
   white-space: pre-line;
@@ -517,7 +652,8 @@ button:focus, input:focus, select:focus { outline: none; }
 /* Marks the specific field(s) a validation error points at, so a guide
    doesn't have to read the error text then hunt for the offending input. */
 input.field-invalid, select.field-invalid {
-  border-color: #c0392b;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
 }
 .button-row.field-invalid,
 #paid-channel-fields.field-invalid,
@@ -525,7 +661,7 @@ input.field-invalid, select.field-invalid {
 #payment-fields.field-invalid,
 #cost-fields.field-invalid,
 #paid-language-buttons.field-invalid {
-  outline: 2px solid #c0392b;
+  outline: 2px solid var(--danger);
   outline-offset: 4px;
   border-radius: 4px;
 }
@@ -546,11 +682,8 @@ input.field-invalid, select.field-invalid {
 .dodai-link:hover .dodai-logo { opacity: 1; }
 
 /* Mobile: +2px on font sizes (3px for the small language buttons); inputs 16px so iOS Safari doesn't zoom
-   the page when a field is focused. Muted text is darkened for outdoor
-   legibility (#9e9e9e is 2.7:1 on white, #6b6b6b is 5.3:1). Desktop above
-   is unchanged. */
+   the page when a field is focused. Desktop above keeps the base sizes. */
 @media (max-width: 600px) {
-  :root { --muted: #6b6b6b; }
   h1 { font-size: 24px; }
   #result-message { font-size: 18px; }
   #result-message .result-detail { font-size: 16px; }
@@ -581,9 +714,21 @@ input.field-invalid, select.field-invalid {
   --white-smoke: #121212;
   --muted: #a3a3a3;
   --border: #3a3a3a;
-  --border-strong: #4a4a4a;
+  --border-strong: #707070;
+  --danger: #ff8a80;
+  --danger-bg: #3a1f1d;
+  --success: #6fcf97;
+  --warn: #f2b84b;
+  --accent: #7fb4d8;
 }
 :root[data-theme="dark"] .card { box-shadow: none; }
+/* The error and success icons are SVG backgrounds with hardcoded strokes. */
+:root[data-theme="dark"] .error {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff8a80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 7v6'/><path d='M12 16.5v.01'/></svg>");
+}
+:root[data-theme="dark"] #result-message::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236fcf97' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M7.5 12.5l3 3 6-6.5'/></svg>");
+}
 /* Select arrow and date icon are SVG backgrounds with a hardcoded dark fill,
    so dark mode needs light copies. */
 :root[data-theme="dark"] select {

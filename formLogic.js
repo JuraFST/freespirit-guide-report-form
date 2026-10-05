@@ -2,12 +2,12 @@ export function validateFreeTourFields(fields, allowedLanguages, allowedTimeSlot
   var errors = {};
   if (allowedLanguages.indexOf(fields.language) === -1) errors.language = 'Pick a language.';
 
-  var paxNum = Number(fields.pax);
-  if (!Number.isInteger(paxNum) || paxNum <= 0) errors.pax = 'Pax must be a positive whole number.';
-
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fields.date || '')) errors.date = 'Pick a date.';
 
   if (allowedTimeSlots.indexOf(fields.time) === -1) errors.time = 'Pick a time.';
+
+  var paxNum = Number(fields.pax);
+  if (!Number.isInteger(paxNum) || paxNum <= 0) errors.pax = 'Pax must be a positive whole number.';
 
   return errors;
 }
@@ -73,7 +73,9 @@ export function validatePaidTourFields(fields, allowedLanguages, allowedTimeSlot
 
   if (!errors.channels && !anyChannel) errors.channels = 'Enter at least one channel pax.';
   if (!errors.channels && !errors.pax && channelSum !== statedPax) {
-    errors.channels = 'Channel pax must add up to the total Pax.';
+    var gap = statedPax - channelSum;
+    errors.channels = 'Channels add up to ' + channelSum + ', Total Pax is ' + statedPax + '. ' +
+      (gap > 0 ? 'Add ' + gap + ' more' : 'Remove ' + (-gap)) + ' or change Total Pax.';
   }
 
   return errors;
@@ -120,4 +122,14 @@ export function buildSubmissionPayload(fields) {
     }
   }
   return payload;
+}
+
+export function buildMySalesRequest(city, name, windowDays) {
+  return { action: 'mySales', city: city, name: name, windowDays: windowDays };
+}
+
+// 'yyyy-mm-dd' -> 'dd.mm.yyyy.' (the header date's format). Anything else is returned as-is.
+export function formatSaleDate(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? m[3] + '.' + m[2] + '.' + m[1] + '.' : iso;
 }

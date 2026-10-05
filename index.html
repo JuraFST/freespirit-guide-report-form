@@ -32,12 +32,14 @@
     <h1 id="page-title"><span id="page-title-text">Tour Log</span><img id="title-city-icon" class="title-city-icon" alt=""></h1>
 
     <div id="sticky-bar" class="sticky-bar">
-      <div id="nav-row" class="nav-row hidden">
-        <button id="back-button" type="button" class="link-button">&larr; Back</button>
-        <span id="progress-label" class="progress-label"></span>
+      <div class="sticky-bar-inner">
+        <div id="nav-row" class="nav-row hidden">
+          <button id="back-button" type="button" class="link-button">&larr; Back</button>
+          <span id="progress-label" class="progress-label" aria-live="polite"></span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="Form progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill" class="progress-fill"></div></div>
+        <p id="tour-line" class="tour-line hidden"></p>
       </div>
-      <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
-      <p id="tour-line" class="tour-line hidden"></p>
     </div>
 
     <section id="step-city" class="step">
@@ -53,20 +55,32 @@
 
     <section id="step-tour" class="step hidden">
       <p class="who-line"><span id="who-line-text"></span><button id="not-you-button" type="button" class="who-link">Not you?</button></p>
-      <h2>Tour</h2>
-      <select id="tour-select"></select>
-      <button id="tour-continue" type="button">Continue</button>
+      <div class="tab-bar" role="tablist">
+        <button id="tab-log" type="button" role="tab" aria-selected="true" class="tab selected">Log</button>
+        <button id="tab-sales" type="button" role="tab" aria-selected="false" class="tab">My Sales</button>
+      </div>
+      <div id="log-panel" role="tabpanel">
+        <h2>Tour</h2>
+        <select id="tour-select"></select>
+        <button id="tour-continue" type="button">Continue</button>
+      </div>
+      <div id="sales-panel" role="tabpanel" class="hidden">
+        <div class="button-row button-row--tight">
+          <button id="sales-window-7" type="button" class="selected">7 days</button>
+          <button id="sales-window-30" type="button">30 days</button>
+        </div>
+        <p id="sales-total" class="sales-total"></p>
+        <ul id="sales-list" class="sales-list"></ul>
+        <p id="sales-message" class="sales-message"></p>
+        <p class="sales-note">Update your placomat with these sales.</p>
+      </div>
     </section>
 
     <section id="step-details-free" class="step hidden">
       <h2>Tour details</h2>
       <div class="field">
-        <label>Language</label>
-        <div id="language-buttons" class="button-row"></div>
-      </div>
-      <div class="field">
-        <label for="pax-input">Pax</label>
-        <input id="pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
+        <label id="language-label">Language</label>
+        <div id="language-buttons" class="button-row" role="group" aria-labelledby="language-label"></div>
       </div>
       <div class="field">
         <label for="date-input">Date</label>
@@ -75,6 +89,10 @@
       <div class="field">
         <label for="time-select">Time</label>
         <select id="time-select"></select>
+      </div>
+      <div class="field">
+        <label for="pax-input">Pax</label>
+        <input id="pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div class="field">
         <label for="photo-input">Tour photo</label>
@@ -89,15 +107,16 @@
         <label for="note-input">Note (optional)</label>
         <input id="note-input" type="text">
       </div>
-      <p id="details-error" class="error hidden"></p>
+      <p id="details-error" class="error hidden" role="alert"></p>
       <button id="submit-button" type="button">Submit</button>
+      <p class="submit-note hidden" role="status">Still sending. This can take a few seconds. Do not tap again.</p>
     </section>
 
     <section id="step-details-paid" class="step hidden">
       <h2>Tour details (paid)</h2>
       <div class="field">
-        <label>Language</label>
-        <div id="paid-language-buttons"></div>
+        <label id="paid-language-label">Language</label>
+        <div id="paid-language-buttons" role="group" aria-labelledby="paid-language-label"></div>
       </div>
       <div class="field">
         <label for="paid-date-input">Date</label>
@@ -107,39 +126,42 @@
         <label for="paid-time-select">Time</label>
         <select id="paid-time-select"></select>
       </div>
+      <h3 class="section-title">Guests by channel</h3>
       <div class="field">
         <label for="paid-pax-input">Total Pax</label>
         <input id="paid-pax-input" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
-        <p class="field-hint">Tap an OTA to enter the pax count.</p>
       </div>
-      <div id="channel-buttons" class="button-row button-row--compact"></div>
+      <p id="channel-hint" class="field-hint field-hint--instruction">Tap a channel to enter its pax count.</p>
+      <div id="channel-buttons" class="button-row button-row--compact button-row--toggle" role="group" aria-labelledby="channel-hint"></div>
       <div id="paid-channel-fields"></div>
       <p id="channel-total" class="channel-total"></p>
       <div id="war-extras" class="hidden">
         <div class="field">
-          <label>Sold by</label>
-          <div id="seller-rows"></div>
+          <label id="seller-label">Sold by</label>
+          <div id="seller-rows" role="group" aria-labelledby="seller-label"></div>
           <p id="seller-total" class="channel-total"></p>
           <button id="add-seller-button" type="button" class="link-button">+ Add seller</button>
         </div>
         <div class="field">
-          <label>Payment method</label>
-          <div id="payment-buttons" class="button-row button-row--compact"></div>
+          <label id="payment-label">Payment method</label>
+          <div id="payment-buttons" class="button-row button-row--compact button-row--toggle" role="group" aria-labelledby="payment-label"></div>
           <div id="payment-fields"></div>
         </div>
       </div>
       <div id="food-extras" class="hidden">
         <div class="field">
-          <label>Costs</label>
+          <label id="cost-label">Costs</label>
           <p class="field-hint">Tap a partner to enter the cost.</p>
-          <div id="cost-buttons" class="button-row button-row--compact"></div>
+          <div id="cost-buttons" class="button-row button-row--compact button-row--toggle" role="group" aria-labelledby="cost-label"></div>
           <div id="cost-fields"></div>
           <p id="cost-total" class="channel-total"></p>
         </div>
       </div>
+      <h3 class="section-title">After the tour</h3>
       <div class="field">
         <label for="no-show-input">No Show</label>
-        <input id="no-show-input" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        <input id="no-show-input" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0" aria-describedby="no-show-hint">
+        <p id="no-show-hint" class="field-hint">Guests who booked but did not come.</p>
       </div>
       <div class="field">
         <label for="paid-photo-input">Tour photo (optional)</label>
@@ -163,8 +185,9 @@
         <label for="paid-note-input">Note (optional)</label>
         <input id="paid-note-input" type="text">
       </div>
-      <p id="paid-details-error" class="error hidden"></p>
+      <p id="paid-details-error" class="error hidden" role="alert"></p>
       <button id="paid-submit-button" type="button">Submit</button>
+      <p class="submit-note hidden" role="status">Still sending. This can take a few seconds. Do not tap again.</p>
     </section>
 
     <section id="step-result" class="step hidden">
