@@ -710,12 +710,6 @@ input.field-invalid, select.field-invalid {
   vertical-align: -0.15em;
   opacity: 0.85;
 }
-.dodai-link {
-  display: inline-block;
-  padding: 14px 6px;
-  margin: -14px -6px;
-  vertical-align: middle;
-}
 .dodai-link:hover .dodai-logo { opacity: 1; }
 
 /* Mobile: +2px on font sizes (3px for the small language buttons); inputs 16px so iOS Safari doesn't zoom
