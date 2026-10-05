@@ -280,6 +280,7 @@ p.field-hint--instruction {
    smaller and muted, since those two cover the overwhelming majority of
    tours and shouldn't compete visually with the rare picks below them. */
 .button-row--compact button {
+  min-width: 44px;
   min-height: 44px;
   padding: 6px 4px;
   font-size: 11px;
@@ -708,6 +709,12 @@ input.field-invalid, select.field-invalid {
   width: auto;
   vertical-align: -0.15em;
   opacity: 0.85;
+}
+.dodai-link {
+  display: inline-block;
+  padding: 14px 6px;
+  margin: -14px -6px;
+  vertical-align: middle;
 }
 .dodai-link:hover .dodai-logo { opacity: 1; }
 
