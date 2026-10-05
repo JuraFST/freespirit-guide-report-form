@@ -1,5 +1,4 @@
 export const CONFIG = {
-  clientId: '899808144926-uo2oh0undnbqm9v0pc5ogvhmu41tndvo.apps.googleusercontent.com',
   appsScriptExecUrl: 'https://script.google.com/macros/s/AKfycbxNHeTz0HBskYAp_GlW4MeLLwF7IVjlGLZ9r4m3e_VNf5P0M_MUf-9Xb3ZmyJqt3nXQ/exec',
   cities: [
     { code: 'zg', label: 'Zagreb' },
