@@ -942,11 +942,21 @@ function makeNumberField_(id, labelText, step) {
   label.setAttribute('for', id);
   label.textContent = labelText;
   var input = document.createElement('input');
-  input.type = 'number';
-  input.min = '0';
-  input.step = step || '1';
-  input.inputMode = step ? 'decimal' : 'numeric';
-  if (!step) input.pattern = '[0-9]*';
+  if (step) {
+    // type=number rejects "," on a Croatian-locale phone while the page is
+    // lang="en", so decimals are plain text; "," is turned into "." as typed.
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.addEventListener('input', function () {
+      if (input.value.indexOf(',') !== -1) input.value = input.value.replace(/,/g, '.');
+    });
+  } else {
+    input.type = 'number';
+    input.min = '0';
+    input.step = '1';
+    input.inputMode = 'numeric';
+    input.pattern = '[0-9]*';
+  }
   input.placeholder = '0';
   input.id = id;
   field.appendChild(label);
