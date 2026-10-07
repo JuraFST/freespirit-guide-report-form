@@ -33,11 +33,11 @@
 
     <div id="sticky-bar" class="sticky-bar">
       <div class="sticky-bar-inner">
+        <div class="progress-track" role="progressbar" aria-label="Form progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill" class="progress-fill"></div></div>
         <div id="nav-row" class="nav-row hidden">
           <button id="back-button" type="button" class="link-button">&larr; Back</button>
           <span id="progress-label" class="progress-label" aria-live="polite"></span>
         </div>
-        <div class="progress-track" role="progressbar" aria-label="Form progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill" class="progress-fill"></div></div>
         <p id="tour-line" class="tour-line hidden"></p>
       </div>
     </div>
@@ -58,6 +58,8 @@
       <div class="tab-bar" role="tablist">
         <button id="tab-log" type="button" role="tab" aria-selected="true" class="tab selected">Log</button>
         <button id="tab-sales" type="button" role="tab" aria-selected="false" class="tab">My Sales</button>
+        <!-- Reviews tab hidden until the backend ships: remove "hidden" from the class below. -->
+        <button id="tab-reviews" type="button" role="tab" aria-selected="false" class="tab hidden">Reviews</button>
       </div>
       <div id="log-panel" role="tabpanel">
         <h2>Tour</h2>
@@ -74,6 +76,15 @@
         <ul id="sales-list" class="sales-list"></ul>
         <p id="sales-message" class="sales-message"></p>
         <p class="sales-note">Update your placomat with these sales.</p>
+      </div>
+      <div id="reviews-panel" role="tabpanel" class="hidden">
+        <select id="reviews-month"></select>
+        <p id="reviews-stats" class="sales-total"></p>
+        <p id="reviews-detail" class="sales-message"></p>
+        <p id="reviews-year" class="sales-message"></p>
+        <div id="reviews-strip" class="reviews-strip" aria-hidden="true"></div>
+        <p id="reviews-message" class="sales-message"></p>
+        <p class="sales-note">Counts only reviews matched to you.</p>
       </div>
     </section>
 

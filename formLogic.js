@@ -128,6 +128,25 @@ export function buildMySalesRequest(city, name, windowDays) {
   return { action: 'mySales', city: city, name: name, windowDays: windowDays };
 }
 
+export function buildMyReviewsRequest(city, name) {
+  return { action: 'myReviews', city: city, name: name };
+}
+
+// The month's entry from the backend's months list; a month with no tab or
+// no reviews is an empty entry.
+export function monthStats(months, month) {
+  var found = months.filter(function (m) { return m.month === month; })[0];
+  return found || { month: month, count: 0, average: null, fiveStarPercent: null };
+}
+
+// "September: 4.7 (+0.2)", or '' when either month has no reviews.
+export function formatReviewDelta(monthLabel, current, previous) {
+  if (!previous || !previous.count || !current.count) return '';
+  var diff = Math.round((current.average - previous.average) * 10) / 10;
+  var change = diff === 0 ? 'no change' : (diff > 0 ? '+' : '-') + Math.abs(diff).toFixed(1);
+  return monthLabel + ': ' + previous.average.toFixed(1) + ' (' + change + ')';
+}
+
 // 'yyyy-mm-dd' -> 'dd.mm.yyyy.' (the header date's format). Anything else is returned as-is.
 export function formatSaleDate(iso) {
   var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');

@@ -12,7 +12,7 @@ export const CONFIG = {
   // remove or reformat the markers themselves.
   guidesByCity: {
     zg: [
-      'Juraj Zebec', 'Antonio Sičić',
+      'Juraj Zebec', 'Antonio Sičić', 'Antun Zebec',
       'Darko Crnolatac', 'Diana Bolić', 'Dora Mlinarek Dominik',
       'Doris Cvetko Pavišić', 'Iva Pavlović', 'Ivana Čakarić',
       'Katarina Novoselac', 'Katija Crnčević', 'Kristina Božić',

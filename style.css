@@ -116,12 +116,15 @@ h1 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
+  transition: opacity 0.3s ease-out;
 }
 .progress-track {
   height: 5px;
   background: var(--border);
   border-radius: 3px;
   overflow: hidden;
+  margin-bottom: 6px;
+  transition: opacity 0.3s ease-out;
 }
 /* Nav row, progress bar and tour name stay pinned to the top while the
    (long) step-4 form scrolls. Negative margin + padding stretch the bar to
@@ -131,24 +134,20 @@ h1 {
   top: 0;
   z-index: 10;
   background: var(--white);
-  margin: 0 -28px 32px;
+  margin: -10px -28px 32px;
   padding: 8px 28px 6px;
-  /* Collapsing (My Sales tab) animates the row height 1fr -> 0fr, so the
-     content below glides up instead of jumping. */
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out, opacity 0.3s ease-out, visibility 0s linear 0s;
 }
-.sticky-bar-inner { overflow: hidden; min-height: 0; }
-.sticky-bar--collapsed {
-  grid-template-rows: 0fr;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-bottom: 16px;
-  opacity: 0;
-  visibility: hidden; /* after the collapse, so Back can't be tabbed to */
-  transition: grid-template-rows 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out, opacity 0.3s ease-out, visibility 0s linear 0.3s;
-}
+.sticky-bar-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+.sticky-bar-inner > * { flex: none; }
+/* Progress bar above Back by default; below it on step 4 (app.js moveProgressBar_).
+   Same total height either way, so nothing under the bar moves. */
+.nav-row { order: 1; }
+.tour-line { order: 3; }
+.sticky-bar--bar-below .progress-track { order: 2; }
+/* My Sales / Reviews fade the progress bar and label but keep their space, so
+   switching tabs never moves Back or anything below it. */
+.sticky-bar--nav-only .progress-track { opacity: 0; }
+.sticky-bar--nav-only .progress-label { opacity: 0; }
 .sticky-bar::after {
   content: '';
   position: absolute;
@@ -197,7 +196,7 @@ p.field-hint--instruction {
   color: var(--muted);
 }
 .tour-line {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -335,7 +334,7 @@ p.field-hint--instruction {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -12px 0 8px;
+  margin: -28px 0 8px;
   font-size: 16px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -363,9 +362,9 @@ p.field-hint--instruction {
 }
 .tab {
   flex: none;
-  min-width: 112px;
+  min-width: 96px;
   min-height: 44px;
-  padding: 6px 20px;
+  padding: 6px 16px;
   border: 1px solid var(--muted);
   border-radius: 4px;
   background: var(--white);
@@ -381,14 +380,14 @@ p.field-hint--instruction {
    padding so the tabs do not shift when selected. */
 .tab.selected {
   border: 2px solid var(--black);
-  padding: 5px 19px;
+  padding: 5px 15px;
   font-weight: 700;
 }
 
 @keyframes panel-in { from { opacity: 0; } to { opacity: 1; } }
 .panel-in { animation: panel-in 0.15s ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .sticky-bar, .sticky-bar--collapsed { transition: none; }
+  .progress-track, .progress-label { transition: none; }
   .panel-in { animation: none; }
 }
 
@@ -415,6 +414,14 @@ p.field-hint--instruction {
   text-decoration-thickness: 2px;
   text-underline-offset: 6px;
 }
+#reviews-month { margin: 0 0 16px; }
+.reviews-strip { display: flex; align-items: flex-end; gap: 2px; margin: 16px 0 16px; }
+.reviews-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.reviews-col-value { font-size: 10px; color: var(--muted); height: 12px; }
+.reviews-col-bar { width: 60%; max-width: 18px; background: var(--border); border-radius: 2px 2px 0 0; }
+.reviews-col-label { font-size: 11px; color: var(--muted); }
+.reviews-col.selected .reviews-col-bar { background: var(--black); }
+.reviews-col.selected .reviews-col-value, .reviews-col.selected .reviews-col-label { color: var(--black); font-weight: 700; }
 .sales-total {
   margin: 0 0 12px;
   font-weight: 600;

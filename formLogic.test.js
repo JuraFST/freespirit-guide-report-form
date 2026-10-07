@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, formatSaleDate } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, buildMyReviewsRequest, formatReviewDelta, monthStats, formatSaleDate } from './formLogic.js';
 
 test('validateFreeTourFields rejects unknown language', () => {
   var errors = validateFreeTourFields(
@@ -173,6 +173,31 @@ test('buildMySalesRequest builds the mySales payload', () => {
     buildMySalesRequest('zg', 'Juraj Zebec', 7),
     { action: 'mySales', city: 'zg', name: 'Juraj Zebec', windowDays: 7 }
   );
+});
+
+test('buildMyReviewsRequest builds the myReviews payload', () => {
+  assert.deepEqual(
+    buildMyReviewsRequest('zg', 'Juraj Zebec'),
+    { action: 'myReviews', city: 'zg', name: 'Juraj Zebec' }
+  );
+});
+
+test('monthStats returns the month or an empty entry', () => {
+  var months = [{ month: 9, count: 9, average: 4.7, fiveStarPercent: 80 }];
+  assert.equal(monthStats(months, 9).count, 9);
+  assert.deepEqual(monthStats(months, 3), { month: 3, count: 0, average: null, fiveStarPercent: null });
+});
+
+test('formatReviewDelta shows last month and the signed change', () => {
+  assert.equal(formatReviewDelta('September', { count: 14, average: 4.9 }, { count: 9, average: 4.7 }), 'September: 4.7 (+0.2)');
+  assert.equal(formatReviewDelta('September', { count: 14, average: 4.5 }, { count: 9, average: 4.7 }), 'September: 4.7 (-0.2)');
+  assert.equal(formatReviewDelta('September', { count: 3, average: 4.7 }, { count: 9, average: 4.7 }), 'September: 4.7 (no change)');
+});
+
+test('formatReviewDelta is empty when there is nothing to compare', () => {
+  assert.equal(formatReviewDelta('September', { count: 14, average: 4.9 }, null), '');
+  assert.equal(formatReviewDelta('September', { count: 14, average: 4.9 }, { count: 0, average: null }), '');
+  assert.equal(formatReviewDelta('September', { count: 0, average: null }, { count: 9, average: 4.7 }), '');
 });
 
 test('formatSaleDate turns an ISO date into dd.mm.yyyy.', () => {

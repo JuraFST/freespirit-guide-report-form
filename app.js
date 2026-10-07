@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, formatSaleDate } from './formLogic.js';
+import { validateFreeTourFields, validatePaidTourFields, buildSubmissionPayload, flowForTour, sumCosts, buildMySalesRequest, buildMyReviewsRequest, formatReviewDelta, monthStats, formatSaleDate } from './formLogic.js';
 
 var state = { city: null, name: null, tour: null, language: null, paidLanguage: null };
 
@@ -188,6 +188,28 @@ function resetTitlePosition_(titleText) {
   void titleText.offsetWidth; // force reflow so the reset takes effect before re-enabling the transition
 }
 
+// The progress bar sits above Back on steps 1 to 3 and below it on step 4.
+// Swapping them animates (FLIP: measure, reorder, then play from the old
+// position) so the two glide past each other. The first layout, and reduced
+// motion, skip the animation.
+var progressBarLaidOut_ = false;
+function moveProgressBar_(below) {
+  var bar = document.getElementById('sticky-bar');
+  var moving = [document.querySelector('.progress-track'), document.getElementById('nav-row')];
+  var changed = bar.classList.contains('sticky-bar--bar-below') !== below;
+  var first = moving.map(function (el) { return el.getBoundingClientRect().top; });
+  bar.classList.toggle('sticky-bar--bar-below', below);
+  var animate = changed && progressBarLaidOut_ && moving[0].animate &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (animate) {
+    moving.forEach(function (el, i) {
+      var dy = first[i] - el.getBoundingClientRect().top;
+      if (dy) el.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 300, easing: 'ease-out' });
+    });
+  }
+  progressBarLaidOut_ = true;
+}
+
 function showStep_(id) {
   document.querySelectorAll('.step').forEach(function (el) { el.classList.add('hidden'); });
   document.getElementById(id).classList.remove('hidden');
@@ -220,6 +242,7 @@ function showStep_(id) {
   var onDetails = id === 'step-details-free' || id === 'step-details-paid';
   tourLine.textContent = tourMeta ? tourMeta.label : '';
   tourLine.classList.toggle('hidden', !(onDetails && tourMeta));
+  moveProgressBar_(onDetails);
   updateBackButton_();
   updateTitleCityIcon_(id !== 'step-city');
   if (id === 'step-tour') {
@@ -282,26 +305,23 @@ var salesWindowDays = 7;
 var salesRequestId = 0;
 
 function setTourTab_(tab, animate) {
-  var onSales = tab === 'sales';
-  document.getElementById('tab-log').classList.toggle('selected', !onSales);
-  document.getElementById('tab-log').setAttribute('aria-selected', String(!onSales));
-  document.getElementById('tab-sales').classList.toggle('selected', onSales);
-  document.getElementById('tab-sales').setAttribute('aria-selected', String(onSales));
-  var logPanel = document.getElementById('log-panel');
-  var salesPanel = document.getElementById('sales-panel');
-  logPanel.classList.toggle('hidden', onSales);
-  salesPanel.classList.toggle('hidden', !onSales);
+  ['log', 'sales', 'reviews'].forEach(function (t) {
+    var on = t === tab;
+    document.getElementById('tab-' + t).classList.toggle('selected', on);
+    document.getElementById('tab-' + t).setAttribute('aria-selected', String(on));
+    document.getElementById(t + '-panel').classList.toggle('hidden', !on);
+  });
   if (animate) {
-    var shown = onSales ? salesPanel : logPanel;
+    var shown = document.getElementById(tab + '-panel');
     shown.classList.remove('panel-in');
     void shown.offsetWidth; // restart the fade if the tab is tapped twice quickly
     shown.classList.add('panel-in');
   }
-  // The step bar and Back button belong to the report flow, not to My Sales.
-  var bar = document.getElementById('sticky-bar');
-  bar.classList.toggle('sticky-bar--collapsed', onSales);
-  bar.inert = onSales; // Back keeps an inline visibility, so inert is what stops keyboard focus
-  if (onSales) loadSales_();
+  // My Sales and Reviews are not steps, so the progress bar and step label go;
+  // Back stays so a guide can still leave to the name picker.
+  document.getElementById('sticky-bar').classList.toggle('sticky-bar--nav-only', tab !== 'log');
+  if (tab === 'sales') loadSales_();
+  if (tab === 'reviews') loadReviews_();
 }
 
 function setSalesWindow_(days) {
@@ -367,6 +387,111 @@ function renderSales_(result) {
     li.appendChild(pax);
     list.appendChild(li);
   });
+}
+
+// ---- Reviews tab ----
+var reviewsRequestId = 0;
+var reviewsData = null;
+var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Month tabs in the Review database are numbered 1..12.
+function fillReviewsMonths_() {
+  var select = document.getElementById('reviews-month');
+  if (select.options.length) return;
+  var current = new Date().getMonth() + 1;
+  for (var m = 1; m <= current; m++) select.add(new Option(MONTH_NAMES[m - 1], String(m)));
+  select.value = String(current);
+}
+
+function loadReviews_() {
+  fillReviewsMonths_();
+  var requestId = ++reviewsRequestId;
+  reviewsData = null;
+  clearReviewsView_();
+  document.getElementById('reviews-message').textContent = 'Loading...';
+
+  fetch(CONFIG.appsScriptExecUrl, {
+    method: 'POST',
+    body: JSON.stringify(buildMyReviewsRequest(state.city, state.name)),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (result) {
+      if (requestId !== reviewsRequestId) return;
+      if (!result.ok) { document.getElementById('reviews-message').textContent = result.error || 'Could not load your reviews.'; return; }
+      reviewsData = result;
+      renderReviews_();
+    })
+    .catch(function (err) {
+      if (requestId !== reviewsRequestId) return;
+      console.error(err);
+      document.getElementById('reviews-message').textContent = 'Could not load your reviews. Try again.';
+    });
+}
+
+function clearReviewsView_() {
+  document.getElementById('reviews-stats').textContent = '';
+  document.getElementById('reviews-detail').innerHTML = '';
+  document.getElementById('reviews-year').textContent = '';
+  document.getElementById('reviews-strip').innerHTML = '';
+}
+
+function renderReviews_() {
+  if (!reviewsData) return;
+  clearReviewsView_();
+  var month = Number(document.getElementById('reviews-month').value);
+  var current = monthStats(reviewsData.months, month);
+  var message = document.getElementById('reviews-message');
+
+  if (!current.count) {
+    message.textContent = 'No reviews this month.';
+  } else {
+    message.textContent = '';
+    document.getElementById('reviews-stats').textContent =
+      current.count + (current.count === 1 ? ' review' : ' reviews') + ', average ' + current.average.toFixed(1) + ' / 5';
+    var lines = [current.fiveStarPercent + '% were 5 stars.'];
+    var delta = month > 1 ? formatReviewDelta(MONTH_NAMES[month - 2], current, monthStats(reviewsData.months, month - 1)) : '';
+    if (delta) lines.push(delta);
+    var detail = document.getElementById('reviews-detail');
+    lines.forEach(function (text) {
+      var line = document.createElement('div');
+      line.textContent = text;
+      detail.appendChild(line);
+    });
+  }
+
+  var year = reviewsData.year;
+  if (year.count) {
+    document.getElementById('reviews-year').textContent =
+      new Date().getFullYear() + ' so far: ' + year.average.toFixed(1) + ' over ' + year.count + ' reviews';
+  }
+  renderReviewsStrip_(month);
+}
+
+// One column per month up to the current one: average on top, bar, month initial.
+// Bars run from 3 to 5 so small differences show; the number above each bar
+// keeps that honest.
+function renderReviewsStrip_(selectedMonth) {
+  var strip = document.getElementById('reviews-strip');
+  var currentMonth = new Date().getMonth() + 1;
+  for (var m = 1; m <= currentMonth; m++) {
+    var stats = monthStats(reviewsData.months, m);
+    var col = document.createElement('div');
+    col.className = 'reviews-col' + (m === selectedMonth ? ' selected' : '');
+    var value = document.createElement('span');
+    value.className = 'reviews-col-value';
+    value.textContent = stats.count ? stats.average.toFixed(1) : '';
+    var bar = document.createElement('span');
+    bar.className = 'reviews-col-bar';
+    var fraction = stats.count ? Math.min(1, Math.max(0, (stats.average - 3) / 2)) : 0;
+    bar.style.height = (stats.count ? 4 + Math.round(fraction * 44) : 0) + 'px';
+    var label = document.createElement('span');
+    label.className = 'reviews-col-label';
+    label.textContent = MONTH_NAMES[m - 1].charAt(0);
+    col.appendChild(value);
+    col.appendChild(bar);
+    col.appendChild(label);
+    strip.appendChild(col);
+  }
 }
 
 var DRAFT_KEY = 'freespirit-tour-log-draft';
@@ -1319,6 +1444,8 @@ document.getElementById('name-continue').addEventListener('click', goToTourStep)
 document.getElementById('tour-continue').addEventListener('click', goToTourDetails);
 document.getElementById('tab-log').addEventListener('click', function () { setTourTab_('log', true); });
 document.getElementById('tab-sales').addEventListener('click', function () { setTourTab_('sales', true); });
+document.getElementById('tab-reviews').addEventListener('click', function () { setTourTab_('reviews', true); });
+document.getElementById('reviews-month').addEventListener('change', renderReviews_);
 document.getElementById('sales-window-7').addEventListener('click', function () { setSalesWindow_(7); });
 document.getElementById('sales-window-30').addEventListener('click', function () { setSalesWindow_(30); });
 document.getElementById('submit-button').addEventListener('click', handleSubmit);
