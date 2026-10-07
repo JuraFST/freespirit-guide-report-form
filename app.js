@@ -944,12 +944,10 @@ function makeNumberField_(id, labelText, step) {
   var input = document.createElement('input');
   if (step) {
     // type=number rejects "," on a Croatian-locale phone while the page is
-    // lang="en", so decimals are plain text; "," is turned into "." as typed.
+    // lang="en", so decimals are plain text. The field is never rewritten
+    // while typing (iOS jumps the caret); formLogic reads "," as ".".
     input.type = 'text';
     input.inputMode = 'decimal';
-    input.addEventListener('input', function () {
-      if (input.value.indexOf(',') !== -1) input.value = input.value.replace(/,/g, '.');
-    });
   } else {
     input.type = 'number';
     input.min = '0';

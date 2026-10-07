@@ -66,7 +66,7 @@ export function validatePaidTourFields(fields, allowedLanguages, allowedTimeSlot
     for (var c = 0; c < costKeys.length; c++) {
       var rawCost = fields.costs[costKeys[c]];
       if (rawCost === undefined || rawCost === null || rawCost === '') continue;
-      var cost = Number(rawCost);
+      var cost = amount(rawCost);
       if (!isFinite(cost) || cost < 0) { errors.costs = 'Costs must be amounts in €.'; break; }
     }
   }
@@ -93,10 +93,15 @@ export function flowForTour(tour) {
 export function sumCosts(costs) {
   var total = 0;
   Object.keys(costs || {}).forEach(function (key) {
-    var n = Number(costs[key]);
+    var n = amount(costs[key]);
     if (isFinite(n) && n > 0) total += n;
   });
   return Math.round(total * 100) / 100;
+}
+
+// A typed amount; accepts "," as the decimal separator.
+function amount(raw) {
+  return Number(String(raw).replace(',', '.'));
 }
 
 export function buildSubmissionPayload(fields) {
@@ -116,7 +121,13 @@ export function buildSubmissionPayload(fields) {
     payload.noShow = fields.noShow || '';
     if (fields.sellers) payload.sellers = fields.sellers;
     if (fields.payments) payload.payments = fields.payments;
-    if (fields.costs) payload.costs = fields.costs;
+    if (fields.costs) {
+      payload.costs = {};
+      Object.keys(fields.costs).forEach(function (k) {
+        var v = fields.costs[k];
+        payload.costs[k] = typeof v === 'string' ? v.replace(',', '.') : v;
+      });
+    }
     if (flowForTour(fields.tour) === 'food' && fields.invoices && fields.invoices.length) {
       payload.invoices = fields.invoices;
     }

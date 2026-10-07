@@ -152,6 +152,13 @@ test('war: seller with pax but no name is rejected', () => {
   assert.equal(validatePaidTourFields(f, LANGS, SLOTS, ['web']).sellers, 'Each seller needs a name.');
 });
 
+test('costs accept a comma decimal separator and are sent with a dot', () => {
+  var f = Object.assign({}, OK, { pax: '2', channels: { 'Partner 1': '2' }, costs: { 'Partner 1': '10,50', Other: '2.5' } });
+  assert.equal(validatePaidTourFields(f, LANGS, SLOTS, ['Partner 1', 'Other']).costs, undefined);
+  assert.equal(sumCosts(f.costs), 13);
+  assert.deepEqual(buildSubmissionPayload(Object.assign({ tour: 'food' }, f)).costs, { 'Partner 1': '10.50', Other: '2.5' });
+});
+
 test('food: costs must be non-negative amounts, sumCosts adds them', () => {
   var f = Object.assign({}, OK, { pax: '2', channels: { 'Partner 1': '2' }, costs: { 'Partner 1': '12.50', Other: '' } });
   assert.deepEqual(validatePaidTourFields(f, LANGS, SLOTS, ['Partner 1', 'Other']), {});
