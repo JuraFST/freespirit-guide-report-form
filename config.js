@@ -13,8 +13,8 @@ export const CONFIG = {
   guidesByCity: {
     zg: [
       'Juraj Zebec', 'Antonio Sičić', 'Antun Zebec',
-      'Darko Crnolatac', 'Diana Bolić', 'Dora Mlinarek Dominik',
-      'Doris Cvetko Pavišić', 'Iva Pavlović', 'Ivana Čakarić',
+      'Darko Crnolatac', 'Diana Bolić', 'Dora Mlinarek D',
+      'Doris Cvetko P', 'Iva Pavlović', 'Ivana Čakarić',
       'Katarina Novoselac', 'Katija Crnčević', 'Kristina Božić',
       'Luka Pelicarić', 'Nadir Ivanović', 'Nikolina Folnović', 'Vid Dorić',
     ],
@@ -59,6 +59,7 @@ export const CONFIG = {
   salesChannels: [
     { code: 'web', label: 'Pax - Web' },
     { code: 'airbnb', label: 'Pax - Airbnb' },
+    { code: 'civitatis', label: 'Pax - Civitatis' },
     { code: 'gyg', label: 'Pax - GYG' },
     { code: 'musement', label: 'Pax - Musement' },
     { code: 'viator', label: 'Pax - Viator' },
