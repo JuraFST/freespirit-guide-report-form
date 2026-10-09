@@ -562,6 +562,11 @@ function restoreDraft_() {
       !savedStep || savedStep === 'step-city' || savedStep === 'step-result') {
     return false;
   }
+  // A name no longer on the roster (renamed guide) would fail server-side
+  // with "Guide not found", so drop the stale draft like startFromRememberedGuide_.
+  if (draft.state.name && (CONFIG.guidesByCity[draft.state.city] || []).indexOf(draft.state.name) === -1) {
+    return false;
+  }
 
   state.city = draft.state.city;
   state.name = draft.state.name;
