@@ -336,6 +336,12 @@ function tourLabel_(code) {
   return t ? t.label : code;
 }
 
+// Lookups go as GET with a query string: a POST reply fails for browsers
+// signed into Google (redirect to an HTML error page).
+function readUrl_(request) {
+  return CONFIG.appsScriptExecUrl + '?' + new URLSearchParams(request).toString();
+}
+
 function loadSales_() {
   var requestId = ++salesRequestId;
   var message = document.getElementById('sales-message');
@@ -343,11 +349,7 @@ function loadSales_() {
   document.getElementById('sales-list').innerHTML = '';
   message.textContent = 'Loading...';
 
-  // Plain string body, no custom headers: same CORS rule as the submit calls.
-  fetch(CONFIG.appsScriptExecUrl, {
-    method: 'POST',
-    body: JSON.stringify(buildMySalesRequest(state.city, state.name, salesWindowDays)),
-  })
+  fetch(readUrl_(buildMySalesRequest(state.city, state.name, salesWindowDays)))
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (requestId !== salesRequestId) return; // a newer request replaced this one
@@ -410,10 +412,7 @@ function loadReviews_() {
   clearReviewsView_();
   document.getElementById('reviews-message').textContent = 'Loading...';
 
-  fetch(CONFIG.appsScriptExecUrl, {
-    method: 'POST',
-    body: JSON.stringify(buildMyReviewsRequest(state.city, state.name)),
-  })
+  fetch(readUrl_(buildMyReviewsRequest(state.city, state.name)))
     .then(function (res) { return res.json(); })
     .then(function (result) {
       if (requestId !== reviewsRequestId) return;
