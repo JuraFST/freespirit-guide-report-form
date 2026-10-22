@@ -213,8 +213,8 @@ p.field-hint--instruction {
 /* Step sections: eyebrow-style label instead of a second serif heading,
    so hierarchy stays with the one Playfair h1 above. */
 @keyframes stepFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .step:not(.hidden) { animation: stepFadeIn 0.2s ease; }
 .step h2 {
@@ -389,6 +389,8 @@ p.field-hint--instruction {
 @media (prefers-reduced-motion: reduce) {
   .progress-track, .progress-label { transition: none; }
   .panel-in { animation: none; }
+  .title-city-icon, #back-button { transition: opacity 200ms ease; transform: none !important; }
+  button:active:not(:disabled) { transform: none; }
 }
 
 .button-row--tight { margin: 0 0 8px; align-items: center; gap: 16px; }
@@ -671,6 +673,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 .submit-note { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 
+/* Press feedback starts on pointer-down, not on release (Apple: respond instantly). */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 100ms ease-out;
+}
+
 /* Brand-consistent keyboard focus instead of the browser's default blue ring */
 button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:not(:focus-visible) { outline: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -780,6 +788,9 @@ input.field-invalid, select.field-invalid {
 :root[data-theme="dark"] #city-buttons button::before { filter: invert(1); }
 :root[data-theme="dark"] .dodai-logo { filter: brightness(1.6); }
 
+/* Theme change crossfades one snapshot of the whole page (app.js), so text,
+   backgrounds, icon filters and SVG backgrounds all switch together. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 320ms; }
 .theme-toggle {
   position: relative;
   width: 32px;

@@ -1527,7 +1527,14 @@ if (!restoreDraft_() && !startFromRememberedGuide_()) showStep_('step-city');
 // Dark mode toggle. The initial data-theme is set by the inline script in
 // index.html; this only flips it and remembers the choice on this phone.
 document.getElementById('theme-toggle').addEventListener('click', function () {
-  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem('theme', next); } catch (e) {}
+  var root = document.documentElement;
+  var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  var apply = function () {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+  };
+  // Crossfade the whole page in one snapshot; see ::view-transition-* in style.css.
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (document.startViewTransition && !reduce) document.startViewTransition(apply);
+  else apply();
 });
